@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sunnypool_app/screens/onBording_screen.dart';
 import '../utils/token_storage.dart';
 import 'login_screen.dart';
 import 'dashboard_screen.dart';
@@ -12,7 +13,10 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+
+    Future.delayed(Duration(seconds: 2), () {
+      _checkAuth();
+    });
   }
 
   void _checkAuth() async {
@@ -20,7 +24,8 @@ class _SplashScreenState extends State<SplashScreen> {
     if (token != null) {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardScreen()));
     } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginScreen()));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => OnbordingScreen()));
     }
   }
 

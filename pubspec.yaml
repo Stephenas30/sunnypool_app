@@ -93,8 +93,9 @@ flutter:
   assets:
   - assets/logo.png
   - assets/icon.png
+  - assets/piscine.png
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "icon.png"
+  image_path: "assets/icon.png"
