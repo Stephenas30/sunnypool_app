@@ -9,47 +9,6 @@ class DashboardScreen extends StatefulWidget {
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
-Widget _buildContainerRow(IconData icon, String title, BuildContext context, [Widget? destination]) {
-  return Expanded(
-    child: Container(
-      // padding: EdgeInsets.all(16),
-      margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 70, 73, 74),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          alignment: Alignment.centerLeft,
-        ),
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => destination ?? Scaffold(
-            appBar: AppBar(title: Text(title)),
-            body: Center(child: Text("Page $title en construction")),
-          )));
-        },
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.amber, size: 40),
-          SizedBox(height: 10),
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    ),
-  ));
-}
-
 class _DashboardScreenState extends State<DashboardScreen> {
   List<String> pools = [];
 
@@ -181,7 +140,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 Text(
                                   "Traitement: chlore",
                                   style: TextStyle(
-                                    color: const Color.fromARGB(255, 255, 255, 255),
+                                    color: const Color.fromARGB(
+                                      255,
+                                      255,
+                                      255,
+                                      255,
+                                    ),
                                   ),
                                 ),
                                 SizedBox(height: 8),
@@ -253,16 +217,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildContainerRow(Icons.science, "Analyse de l'eau", context, AnalyseScreen()),
-                  _buildContainerRow(Icons.photo, "Photo piscine", context, PhotosScreen()),
+                  _buildContainerRow(
+                    Icons.science,
+                    "Analyse de l'eau",
+                    AnalyseScreen(),
+                  ),
+                  _buildContainerRow(
+                    Icons.photo,
+                    "Photo piscine",
+                    PhotosScreen(),
+                  ),
                 ],
               ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildContainerRow(Icons.message, "Parler à Sunny", context),
-                  _buildContainerRow(Icons.add, "Ajouter produit", context),
+                  _buildContainerRow(Icons.message, "Parler à Sunny",),
+                  _buildContainerRow(Icons.add, "Ajouter produit",),
                 ],
               ),
               Container(
@@ -304,8 +276,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 value: maintenanceChecked.contains(item),
                                 checkColor: Colors.black,
-                                activeColor: const Color.fromARGB(255, 137, 255, 139),
-                                hoverColor: const Color.fromARGB(255, 137, 255, 139).withOpacity(0.2),
+                                activeColor: const Color.fromARGB(
+                                  255,
+                                  137,
+                                  255,
+                                  139,
+                                ),
+                                hoverColor: const Color.fromARGB(
+                                  255,
+                                  137,
+                                  255,
+                                  139,
+                                ).withOpacity(0.2),
                                 onChanged: (bool? value) {
                                   setState(() {
                                     maintenanceChecked.contains(item)
@@ -380,6 +362,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text("Ouverture: $title")));
       },
+    );
+  }
+
+  Widget _buildContainerRow(
+    IconData icon,
+    String title,
+     [
+    Widget? destination,
+  ]) {
+    return Expanded(
+      child: Container(
+        // padding: EdgeInsets.all(16),
+        margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 70, 73, 74),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            alignment: Alignment.centerLeft,
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    destination ??
+                    Scaffold(
+                      appBar: AppBar(title: Text(title)),
+                      body: Center(child: Text("Page $title en construction")),
+                    ),
+              ),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: Colors.amber, size: 40),
+              SizedBox(height: 10),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

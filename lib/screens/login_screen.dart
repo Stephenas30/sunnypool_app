@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sunnypool_app/screens/userlocation_screen.dart';
 import '../services/auth_service.dart';
 import '../utils/token_storage.dart';
 import 'dashboard_screen.dart';
@@ -35,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => DashboardScreen()),
+            MaterialPageRoute(builder: (_) => UserlocationScreen()),
           );
         }
       } catch (e) {
