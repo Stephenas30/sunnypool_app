@@ -26,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (token != null) {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardScreen()));
     } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => OnbordingScreen()));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => UserlocationScreen()));
     }
   }
 
