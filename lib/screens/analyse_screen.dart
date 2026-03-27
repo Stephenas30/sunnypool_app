@@ -9,7 +9,7 @@ class AnalyseScreen extends StatefulWidget {
 }
 
 const listAnalyse = ['pH', 'Chlore', 'TAC', 'Stabilisant', 'Température'];
-String analyseChecked = '';
+String analyseChecked = 'pH';
 
 
 class _AnalyseScreenState extends State<AnalyseScreen> {

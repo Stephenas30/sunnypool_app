@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sunnypool_app/screens/analyse_screen.dart';
 import 'package:sunnypool_app/screens/photos_screen.dart';
+import 'package:sunnypool_app/screens/product_sreen.dart';
+import 'package:sunnypool_app/screens/tutorals_screen.dart';
 import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -89,13 +91,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               SizedBox(height: 40),
               Image.asset("assets/logo.png", height: 150),
-              _buildMenuItem(Icons.science, "Analyse de l'eau"),
-              _buildMenuItem(Icons.camera_alt, "Diagnostic photo"),
+              _buildMenuItem(Icons.science, "Analyse de l'eau", AnalyseScreen()),
+              _buildMenuItem(Icons.camera_alt, "Diagnostic photo", PhotosScreen()),
               _buildMenuItem(Icons.history, "Historique des analyses"),
               _buildMenuItem(Icons.chat, "Parler à Sunny"),
-              _buildMenuItem(Icons.inventory, "Mes produits"),
+              _buildMenuItem(Icons.inventory, "Mes produits", ProductScreen()),
               _buildMenuItem(Icons.calendar_today, "Planning d'entretien"),
-              _buildMenuItem(Icons.school, "Tutoriels"),
+              _buildMenuItem(Icons.school, "Tutoriels", TutoralsScreen()),
             ],
           ),
         ),
@@ -243,7 +245,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildContainerRow(Icons.message, "Parler à Sunny"),
-                    _buildContainerRow(Icons.add, "Ajouter produit"),
+                    _buildContainerRow(Icons.add, "Ajouter produit", ProductScreen()),
                   ],
                 ),
                 Container(
@@ -362,15 +364,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String title) {
+  Widget _buildMenuItem(IconData icon, String title, [Widget? destination]) {
     return ListTile(
       leading: Icon(icon, color: Colors.amber),
       title: Text(title, style: TextStyle(color: Colors.white)),
       onTap: () {
-        Navigator.pop(context);
+        /* Navigator.pop(context);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Ouverture: $title")));
+        ).showSnackBar(SnackBar(content: Text("Ouverture: $title"))); */
+        Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    destination ??
+                    Scaffold(
+                      appBar: AppBar(title: Text(title)),
+                      body: Center(child: Text("Page $title en construction")),
+                    ),
+              ),
+            );
       },
     );
   }

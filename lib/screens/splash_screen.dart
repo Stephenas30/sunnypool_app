@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
+import 'package:sunnypool_app/screens/equipement_screen.dart';
 import 'package:sunnypool_app/screens/onBording_screen.dart';
+import 'package:sunnypool_app/screens/product_sreen.dart';
+import 'package:sunnypool_app/screens/tutorals_screen.dart';
 import 'package:sunnypool_app/screens/userlocation_screen.dart';
 import '../utils/token_storage.dart';
 import 'login_screen.dart';
@@ -26,7 +29,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (token != null) {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardScreen()));
     } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => UserlocationScreen()));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => OnbordingScreen()));
     }
   }
 
