@@ -11,9 +11,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   List<String> pools = [];
-
   List<String> maintenanceChecked = [];
-
   List<String> maintenance = [
     "Vérifier le pH",
     "Nettoyer skimmer",
@@ -21,6 +19,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     "entretien 4",
     "entretien 5",
   ];
+
+  String namePool = 'Ma Piscine';
+  String volumePool = '32';
+  Map<String, dynamic> traitement = {
+    'product': 'chlore',
+    'percent': 0.7,
+  };
+  double temperature = 29;
+  List temps = ['Ensoleillé', 'Vent faible'];
+
 
   void _addPool() {
     setState(() {
@@ -30,6 +38,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.black, // couleur de la barre de notif
@@ -90,220 +101,218 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         body: SingleChildScrollView(
           scrollDirection: Axis.vertical,
-          child: Column(
-            children: [
-              Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                    height: 150,
-                    decoration: BoxDecoration(
-                      // color: const Color.fromARGB(255, 70, 73, 74),
-                      borderRadius: BorderRadius.circular(12),
-                      image: DecorationImage(
-                        image: AssetImage("assets/piscine.png"),
-                        fit: BoxFit.cover,
-                        colorFilter: ColorFilter.mode(
-                          Colors.black.withOpacity(0.1),
-                          BlendMode.darken,
-                        ),
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              spacing: 16,
+              children: [
+                Container(
+                  width: double.infinity,
+                  //margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                  // height: 150,
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    image: DecorationImage(
+                      image: AssetImage("assets/piscine.png"),
+                      fit: BoxFit.cover,
+                      colorFilter: ColorFilter.mode(
+                        Colors.black.withOpacity(0.1),
+                        BlendMode.darken,
                       ),
                     ),
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 16,
+                    children: [
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Ma piscine",
+                            namePool,
                             style: TextStyle(
                               color: const Color.fromARGB(255, 255, 255, 255),
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                              fontSize: screenWidth * 0.08,
+                              // fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            "32 m³",
+                            "$volumePool m³",
                             style: TextStyle(
                               color: const Color.fromARGB(255, 255, 255, 255),
-                              fontSize: 32,
-                              fontWeight: FontWeight.normal,
-                            ),
-                          ),
-                          Container(
-                            margin: EdgeInsets.only(top: 10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Traitement: chlore",
-                                  style: TextStyle(
-                                    color: const Color.fromARGB(
-                                      255,
-                                      255,
-                                      255,
-                                      255,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                LinearProgressIndicator(
-                                  value: 0.7,
-                                  backgroundColor: Colors.white24,
-                                  color: Colors.amber,
-                                  minHeight: 8,
-                                ),
-                              ],
+                              fontSize: screenWidth * 0.07,
+                              // fontWeight: FontWeight.normal,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 70, 73, 74),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: EdgeInsets.all(16),
-                margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.wb_sunny, color: Colors.amber),
-                        SizedBox(width: 10),
-                        Text(
-                          "29°C",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          "Ensoleillé",
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          "°",
-                          style: TextStyle(color: Colors.white, fontSize: 20),
-                        ),
-                        SizedBox(width: 5),
-                        Text(
-                          "Vent faible",
-                          style: TextStyle(
-                            color: const Color.fromARGB(255, 153, 153, 153),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildContainerRow(
-                    Icons.science,
-                    "Analyse de l'eau",
-                    AnalyseScreen(),
-                  ),
-                  _buildContainerRow(
-                    Icons.photo,
-                    "Photo piscine",
-                    PhotosScreen(),
-                  ),
-                ],
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildContainerRow(Icons.message, "Parler à Sunny",),
-                  _buildContainerRow(Icons.add, "Ajouter produit",),
-                ],
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 70, 73, 74),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                height: 350,
-                width: double.infinity,
-                padding: EdgeInsets.all(16),
-                margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Prochain entretien',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Divider(color: Colors.white54, height: 20),
-                    SizedBox(height: 10),
-                    Expanded(
-                      child: ListView(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        children: maintenance
-                            .map(
-                              (item) => CheckboxListTile(
-                                title: Text(
-                                  item,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                value: maintenanceChecked.contains(item),
-                                checkColor: Colors.black,
-                                activeColor: const Color.fromARGB(
-                                  255,
-                                  137,
-                                  255,
-                                  139,
-                                ),
-                                hoverColor: const Color.fromARGB(
-                                  255,
-                                  137,
-                                  255,
-                                  139,
-                                ).withOpacity(0.2),
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    maintenanceChecked.contains(item)
-                                        ? maintenanceChecked.remove(item)
-                                        : maintenanceChecked.add(item);
-                                  });
-                                },
+                      /* Container(
+                        child: */ Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Traitement: ${traitement['product']}",
+                              style: TextStyle(
+                                color: const Color.fromARGB(255, 255, 255, 255),
                               ),
-                            )
-                            .toList(),
+                            ),
+                            LinearProgressIndicator(
+                              value: traitement['percent'],
+                              backgroundColor: Colors.white24,
+                              color: Colors.amber,
+                              minHeight: 8,
+                            ),
+                          ],
+                        ),
+                      // ),
+                    ],
+                  ),
+                ),
+
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 70, 73, 74),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: EdgeInsets.all(16),
+                  // margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        spacing: 10,
+                        children: [
+                          Icon(Icons.wb_sunny, color: Colors.amber, size: screenHeight * 0.05,),
+                          Text(
+                            "$temperature°C",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: screenWidth * 0.07,
+                              // fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
+                      Row(
+                        spacing: 10,
+                        children: [
+                          Text(
+                            temps[0],
+                            style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.03),
+                          ),
+                          Text(
+                            ".",
+                            style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.03),
+                          ),
+                          Text(
+                            temps[1],
+                            style: TextStyle(
+                              color: const Color.fromARGB(255, 153, 153, 153),
+                              fontSize: screenWidth * 0.03,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  spacing: 16,
+                  children: [
+                    _buildContainerRow(
+                      Icons.science,
+                      "Analyse de l'eau",
+                      AnalyseScreen(),
+                    ),
+                    _buildContainerRow(
+                      Icons.photo,
+                      "Photo piscine",
+                      PhotosScreen(),
                     ),
                   ],
                 ),
-              ),
-              /* pools.isEmpty
+                Row(
+                  spacing: 16,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildContainerRow(Icons.message, "Parler à Sunny"),
+                    _buildContainerRow(Icons.add, "Ajouter produit"),
+                  ],
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 70, 73, 74),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  height: 350,
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16),
+                  // margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Prochain entretien',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: screenWidth * 0.05,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Divider(color: Colors.white54, height: screenWidth * 0.05),
+                      SizedBox(height: 10),
+                      Expanded(
+                        child: ListView(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          children: maintenance
+                              .map(
+                                (item) => CheckboxListTile(
+                                  title: Text(
+                                    item,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: screenWidth * 0.03,
+                                    ),
+                                  ),
+                                  value: maintenanceChecked.contains(item),
+                                  checkColor: Colors.black,
+                                  activeColor: const Color.fromARGB(
+                                    255,
+                                    137,
+                                    255,
+                                    139,
+                                  ),
+                                  hoverColor: const Color.fromARGB(
+                                    255,
+                                    137,
+                                    255,
+                                    139,
+                                  ).withOpacity(0.2),
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      maintenanceChecked.contains(item)
+                                          ? maintenanceChecked.remove(item)
+                                          : maintenanceChecked.add(item);
+                                    });
+                                  },
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                /* pools.isEmpty
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -345,7 +354,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     },
                   ), */
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -367,14 +377,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildContainerRow(
     IconData icon,
-    String title,
-     [
+    String title, [
     Widget? destination,
   ]) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Expanded(
       child: Container(
         // padding: EdgeInsets.all(16),
-        margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        // margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
           color: const Color.fromARGB(255, 70, 73, 74),
           borderRadius: BorderRadius.circular(12),
@@ -402,13 +414,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: Colors.amber, size: 40),
+              Icon(icon, color: Colors.amber, size: screenWidth * 0.08),
               SizedBox(height: 10),
               Text(
                 title,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: screenWidth * 0.04,
                   fontWeight: FontWeight.bold,
                 ),
               ),
