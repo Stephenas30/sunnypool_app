@@ -30,7 +30,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.all(5),
+          padding: EdgeInsets.all(10),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: MediaQuery.of(context).size.height,
@@ -60,21 +60,20 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                   ),
 
                   Container(
-                    padding: EdgeInsets.all(20),
-                    margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    decoration: BoxDecoration(
+                    padding: EdgeInsets.all(10),
+                    margin: EdgeInsets.symmetric(horizontal: 20),
+                    /* decoration: BoxDecoration(
                       border: Border.all(color: Colors.white, width: 1),
                       borderRadius: BorderRadius.all(Radius.circular(20)),
-                    ),
+                    ), */
                     child: Form(
                       key: _formKey,
                       child: IntrinsicHeight(
                         child: Column(
-                          spacing: 20,
+                          spacing: 30,
                           children: [
                             TextField(
                               controller: nameController,
-                              cursorHeight: 5,
                               decoration: InputDecoration(
                                 hintText: 'Nom de la piscine',
                                 hintStyle: TextStyle(
@@ -84,18 +83,18 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                                     116,
                                     116,
                                   ),
-                                  fontSize: screenWidth * 0.03,
+                                  // fontSize: screenWidth * 0.03,
                                 ),
                                 border: OutlineInputBorder(),
                                 prefixIcon: Icon(
                                   Icons.person,
                                   color: Colors.amber,
-                                  size: screenWidth * 0.03,
+                                  // size: screenWidth * 0.03,
                                 ),
                                 labelText: 'Nom de la piscine',
                                 labelStyle: TextStyle(
                                   color: Colors.amber,
-                                  fontSize: screenWidth * 0.03,
+                                  // fontSize: screenWidth * 0.03,
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderSide: BorderSide(color: Colors.amber),
@@ -109,7 +108,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                               ),
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: screenWidth * 0.03,
+                                // fontSize: screenWidth * 0.03,
                               ),
                             ),
                             // Text('Type piscine'),
@@ -129,7 +128,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                                 /* prefixIcon: Icon(Icons.person, color: Colors.amber, size: screenWidth * 0.03), */
                                 labelStyle: TextStyle(
                                   color: Colors.amber,
-                                  fontSize: screenWidth * 0.03,
+                                  // fontSize: screenWidth * 0.03,
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderSide: BorderSide(color: Colors.amber),

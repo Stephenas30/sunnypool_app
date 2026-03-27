@@ -23,37 +23,41 @@ class _UserlocationScreen extends State<UserlocationScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      body: Padding(
-        padding: EdgeInsetsGeometry.all(10),
-        child: Flex(
-          direction: Axis.vertical,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            Column(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(10),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: screenHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Image.asset('assets/icon.png', height: screenHeight / 4),
-                  Text(
-                    'Votre Localisation',
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.08,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Column(
+                    children: [
+                      Image.asset('assets/icon.png', height: screenHeight / 4),
+                      Text(
+                        'Votre Localisation',
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.08,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-              ],
-            ),
-            /* Expanded(
-            child: */
-            /* FormField(
-                builder: (field) {F
-                  return */
-            SingleChildScrollView(
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    // margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildTextField(Icons.home, 'Adresse', adresseController),
+                          _buildTextField(
+                            Icons.home,
+                            'Adresse',
+                            adresseController,
+                          ),
                           _buildTextField(
                             Icons.post_add,
                             'Code postal',
@@ -64,43 +68,44 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                             'Ville',
                             villeController,
                           ),
-                          _buildTextField(Icons.local_atm, 'Pays', paysController),
+                          _buildTextField(
+                            Icons.local_atm,
+                            'Pays',
+                            paysController,
+                          ),
                           _buildTextField(
                             Icons.local_atm,
                             'Utiliser ma localisation GPS',
                             paysController,
                           ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 50,
-                              vertical: screenHeight * 0.025,
-                            ),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                print('Adresse: ${adresseController.text}');
-                                print('Code Postal: ${codePostalController.text}');
-                                print('Ville: ${villeController.text}');
-                                print('Pays: ${paysController.text}');
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ConfigurationpiscineScreen(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                'Continuer',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.03,
-                                  color: Colors.white,
+                          SizedBox(height: 20,),
+                          ElevatedButton(
+                            onPressed: () {
+                              print('Adresse: ${adresseController.text}');
+                              print(
+                                'Code Postal: ${codePostalController.text}',
+                              );
+                              print('Ville: ${villeController.text}');
+                              print('Pays: ${paysController.text}');
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ConfigurationpiscineScreen(),
                                 ),
+                              );
+                            },
+                            child: Text(
+                              'Continuer',
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.03,
+                                color: Colors.white,
                               ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.amber,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: screenWidth * 0.2,
-                                  vertical: screenHeight * 0.01,
-                                ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.2,
+                                vertical: screenHeight * 0.01,
                               ),
                             ),
                           ),
@@ -126,10 +131,13 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                         ],
                       ),
                     ),
-              // ),
+                    // ),
+                  ),
+                ],
+              ),
             ),
-          ],
-      ),
+          ),
+        ),
       ),
     );
   }
