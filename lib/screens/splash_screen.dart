@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
-import 'package:sunnypool_app/screens/equipement_screen.dart';
+import 'package:sunnypool_app/screens/dashboard_screen.dart';
 import 'package:sunnypool_app/screens/onBording_screen.dart';
-import 'package:sunnypool_app/screens/product_sreen.dart';
-import 'package:sunnypool_app/screens/tutorals_screen.dart';
-import 'package:sunnypool_app/screens/userlocation_screen.dart';
+import 'package:sunnypool_app/screens/planning_entretien_screen.dart';
 import '../utils/token_storage.dart';
-import 'login_screen.dart';
-import 'dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -43,8 +38,8 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Image.asset("assets/logo.png", height: 200),
             SizedBox(height: 20),
-            Text("SunnyPool", style: TextStyle(color: Colors.yellow, fontSize: 24)),
-            SizedBox(height: 10),
+            Text("Assistant piscine intelligent", style: TextStyle(color: Colors.yellow, fontSize: 24)),
+            // SizedBox(height: 10),
             CircularProgressIndicator(color: Colors.yellow),
           ],
         ),
