@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sunnypool_app/screens/analyse_screen.dart';
+import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
+import 'package:sunnypool_app/screens/historique_analyses.dart';
 import 'package:sunnypool_app/screens/photos_screen.dart';
+import 'package:sunnypool_app/screens/planning_entretien_screen.dart';
 import 'package:sunnypool_app/screens/product_sreen.dart';
 import 'package:sunnypool_app/screens/tutorals_screen.dart';
 import 'profile_screen.dart';
@@ -23,14 +26,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ];
 
   String namePool = 'Ma Piscine';
-  String volumePool = '32';
-  Map<String, dynamic> traitement = {
-    'product': 'chlore',
-    'percent': 0.7,
-  };
+  double volumePool = 32;
+  Map<String, dynamic> traitement = {'product': 'Chlore', 'percent': 0.7};
   double temperature = 29;
   List temps = ['Ensoleillé', 'Vent faible'];
-
 
   void _addPool() {
     setState(() {
@@ -91,12 +90,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               SizedBox(height: 40),
               Image.asset("assets/logo.png", height: 150),
-              _buildMenuItem(Icons.science, "Analyse de l'eau", AnalyseScreen()),
-              _buildMenuItem(Icons.camera_alt, "Diagnostic photo", PhotosScreen()),
-              _buildMenuItem(Icons.history, "Historique des analyses"),
+              _buildMenuItem(
+                Icons.science,
+                "Analyse de l'eau",
+                AnalyseScreen(),
+              ),
+              _buildMenuItem(
+                Icons.camera_alt,
+                "Diagnostic photo",
+                PhotosScreen(),
+              ),
+              _buildMenuItem(Icons.history, "Historique des analyses", HistoriqueAnalyses()),
               _buildMenuItem(Icons.chat, "Parler à Sunny"),
               _buildMenuItem(Icons.inventory, "Mes produits", ProductScreen()),
-              _buildMenuItem(Icons.calendar_today, "Planning d'entretien"),
+              _buildMenuItem(Icons.calendar_today, "Planning d'entretien", PlanningEntretienScreen()),
               _buildMenuItem(Icons.school, "Tutoriels", TutoralsScreen()),
             ],
           ),
@@ -125,34 +132,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 16,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            namePool,
-                            style: TextStyle(
-                              color: const Color.fromARGB(255, 255, 255, 255),
-                              fontSize: screenWidth * 0.08,
-                              // fontWeight: FontWeight.bold,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => Scaffold(
+                            appBar: AppBar(
+                              title: const Text(
+                                'Votre Piscine',
+                                style: TextStyle(color: Colors.yellow),
+                              ),
+                              backgroundColor: Colors.black,
+                              leading: IconButton(
+                                icon: const Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.yellow,
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                              ),
+                              centerTitle: true,
+                              actions: [
+                                IconButton(
+                                  icon: CircleAvatar(
+                                    backgroundImage: AssetImage(
+                                      "assets/icon.png",
+                                    ),
+                                    radius: 16,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ProfileScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
+                            body: ConfigurationpiscineScreen(namePool: namePool, volumePool: volumePool, traitementChecked: [traitement['product']]),
                           ),
-                          Text(
-                            "$volumePool m³",
-                            style: TextStyle(
-                              color: const Color.fromARGB(255, 255, 255, 255),
-                              fontSize: screenWidth * 0.07,
-                              // fontWeight: FontWeight.normal,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 16,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              namePool,
+                              style: TextStyle(
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                                fontSize: screenWidth * 0.08,
+                                // fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      /* Container(
-                        child: */ Column(
+                            Text(
+                              "$volumePool m³",
+                              style: TextStyle(
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                                fontSize: screenWidth * 0.07,
+                                // fontWeight: FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                        /* Container(
+                        child: */
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
@@ -169,8 +229,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ],
                         ),
-                      // ),
-                    ],
+                        // ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -188,7 +249,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Row(
                         spacing: 10,
                         children: [
-                          Icon(Icons.wb_sunny, color: Colors.amber, size: screenHeight * 0.05,),
+                          Icon(
+                            Icons.wb_sunny,
+                            color: Colors.amber,
+                            size: screenHeight * 0.05,
+                          ),
                           Text(
                             "$temperature°C",
                             style: TextStyle(
@@ -204,11 +269,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Text(
                             temps[0],
-                            style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.03),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: screenWidth * 0.03,
+                            ),
                           ),
                           Text(
                             ".",
-                            style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.03),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: screenWidth * 0.03,
+                            ),
                           ),
                           Text(
                             temps[1],
@@ -245,7 +316,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildContainerRow(Icons.message, "Parler à Sunny"),
-                    _buildContainerRow(Icons.add, "Ajouter produit", ProductScreen()),
+                    _buildContainerRow(
+                      Icons.add,
+                      "Ajouter produit",
+                      ProductScreen(),
+                    ),
                   ],
                 ),
                 Container(
@@ -269,7 +344,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Divider(color: Colors.white54, height: screenWidth * 0.05),
+                      Divider(
+                        color: Colors.white54,
+                        height: screenWidth * 0.05,
+                      ),
                       SizedBox(height: 10),
                       Expanded(
                         child: ListView(
@@ -374,16 +452,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text("Ouverture: $title"))); */
         Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    destination ??
-                    Scaffold(
-                      appBar: AppBar(title: Text(title)),
-                      body: Center(child: Text("Page $title en construction")),
-                    ),
-              ),
-            );
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                destination ??
+                Scaffold(
+                  appBar: AppBar(title: Text(title)),
+                  body: Center(child: Text("Page $title en construction")),
+                ),
+          ),
+        );
       },
     );
   }

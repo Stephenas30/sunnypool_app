@@ -2,7 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:sunnypool_app/screens/dashboard_screen.dart';
 
 class ConfigurationpiscineScreen extends StatefulWidget {
-  const ConfigurationpiscineScreen({Key? key}) : super(key: key);
+  final String? namePool;
+  final String? typePool;
+  final double? lengthPool;
+  final double? widthPool;
+  final double? depthPool;
+  final double volumePool;
+  final List<String> traitementChecked;
+
+  const ConfigurationpiscineScreen({
+    Key? key,
+    this.namePool,
+    this.typePool,
+    this.lengthPool,
+    this.widthPool,
+    this.depthPool,
+    this.volumePool = 23,
+    this.traitementChecked = const ['Chlore'],
+  }) : super(key: key);
 
   @override
   _ConfigurationpiscineScreen createState() {
@@ -14,13 +31,18 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
   final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
 
-  String? namePool;
-  String? typePool = "Béton";
-  double? lengthPool;
-  double? widthPool;
-  double? depthPool;
+  String? typePool;
   double volumePool = 23;
   List<String> traitementChecked = ['Chlore'];
+
+  @override
+  void initState() {
+    super.initState();
+    typePool = widget.typePool;
+    volumePool = widget.volumePool;
+    nameController.text = widget.namePool ?? '';
+    traitementChecked = widget.traitementChecked;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +52,10 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.all(10),
+          padding: nameController.text.isEmpty ? EdgeInsets.all(10) : EdgeInsets.zero,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height,
+              //minHeight: MediaQuery.of(context).size.height,
             ),
             child: IntrinsicHeight(
               child: Column(
@@ -43,13 +65,13 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                   Column(
                     children: [
                       Image.asset('assets/logo.png', height: screenHeight / 6),
-                      Text(
+                      nameController.text.isEmpty ? Text(
                         'Bienvenue!',
                         style: TextStyle(
                           fontSize: screenWidth * 0.08,
                           fontWeight: FontWeight.bold,
                         ),
-                      ),
+                      ) : SizedBox.shrink(),
                       Text(
                         'Configurons votre piscine pour un suivi optimal.',
                         style: TextStyle(fontSize: screenWidth * 0.03),
@@ -140,14 +162,21 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                                   ),
                                 ),
                               ),
-                              items: ["Coque", "Béton", "Liner", "Autre"]
-                                  .map(
-                                    (item) => DropdownMenuItem(
-                                      value: item,
-                                      child: Text(item),
-                                    ),
-                                  )
-                                  .toList(),
+                              items:
+                                  [
+                                        "Coque",
+                                        "Béton",
+                                        "Liner",
+                                        "Membrane",
+                                        "Hors-sol",
+                                      ]
+                                      .map(
+                                        (item) => DropdownMenuItem(
+                                          value: item,
+                                          child: Text(item),
+                                        ),
+                                      )
+                                      .toList(),
                               onChanged: (value) {
                                 setState(() {
                                   typePool = value;
@@ -191,29 +220,29 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                                 ),
                               ],
                             ),
-                            /* Row(
-                        children: [
-                          Expanded(
-                            child: Slider(
-                              value: volumePool,
-                              min: 0,
-                              max: 100,
-                              divisions: 10,
-                              label: volumePool.toString(),
-                              activeColor: Colors.blue,
-                              inactiveColor: Colors.grey,
-                              onChanged: (value) {
-                                setState(() {
-                                  volumePool = value;
-                                });
-                              },
-                            ),
-                          ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Slider(
+                                    value: volumePool,
+                                    min: 0,
+                                    max: 100,
+                                    divisions: 10,
+                                    label: volumePool.toString(),
+                                    activeColor: Colors.blue,
+                                    inactiveColor: Colors.grey,
+                                    onChanged: (value) {
+                                      // setState(() {
+                                      //   volumePool = value;
+                                      // });
+                                    },
+                                  ),
+                                ),
 
-                          Text('${volumePool.toString()} m3'),
-                          SizedBox(width: 20),
-                        ],
-                      ), */
+                                Text('${volumePool.toString()} m3'),
+                                SizedBox(width: 20),
+                              ],
+                            ),
                             Text(
                               'Traitement',
                               style: TextStyle(
@@ -228,7 +257,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 spacing: 10,
-                                children: ['Chlore', 'Brome', 'Sel']
+                                children: ['Chlore', 'Brome', 'Sel', 'Autre']
                                     .map(
                                       (item) => Expanded(
                                         child: ElevatedButton(
