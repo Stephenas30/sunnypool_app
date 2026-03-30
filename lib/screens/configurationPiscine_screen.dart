@@ -1,23 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/screens/dashboard_screen.dart';
 
 class ConfigurationpiscineScreen extends StatefulWidget {
-  final String? namePool;
-  final String? typePool;
-  final double? lengthPool;
-  final double? widthPool;
-  final double? depthPool;
-  final double volumePool;
+  final Pool? pool;
   final List<String> traitementChecked;
 
   const ConfigurationpiscineScreen({
     Key? key,
-    this.namePool,
-    this.typePool,
-    this.lengthPool,
-    this.widthPool,
-    this.depthPool,
-    this.volumePool = 23,
+    this.pool,
     this.traitementChecked = const ['Chlore'],
   }) : super(key: key);
 
@@ -30,18 +21,33 @@ class ConfigurationpiscineScreen extends StatefulWidget {
 class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
   final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
+  final lengthController = TextEditingController();
+  final widthController = TextEditingController();
+  final depthController = TextEditingController();
 
-  String? typePool;
-  double volumePool = 23;
+  TypePool? typePool;
+  double? volumePool;
   List<String> traitementChecked = ['Chlore'];
 
   @override
   void initState() {
     super.initState();
-    typePool = widget.typePool;
-    volumePool = widget.volumePool;
-    nameController.text = widget.namePool ?? '';
+    typePool = widget.pool?.type;
+    volumePool = widget.pool?.volume;
+    nameController.text = widget.pool?.name ?? '';
+    lengthController.text = widget.pool?.dimension.length.toString() ?? '';
+    widthController.text = widget.pool?.dimension.width.toString() ?? '';
+    depthController.text = widget.pool?.dimension.depth.toString() ?? '';
     traitementChecked = widget.traitementChecked;
+  }
+
+  void onChangedVolume() {
+    final length = double.tryParse(lengthController.text) ?? 0;
+    final width = double.tryParse(widthController.text) ?? 0;
+    final depth = double.tryParse(depthController.text) ?? 0;
+    setState(() {
+      volumePool = length * width * depth;
+    });
   }
 
   @override
@@ -52,7 +58,9 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
-          padding: nameController.text.isEmpty ? EdgeInsets.all(10) : EdgeInsets.zero,
+          padding: nameController.text.isEmpty
+              ? EdgeInsets.all(10)
+              : EdgeInsets.zero,
           child: ConstrainedBox(
             constraints: BoxConstraints(
               //minHeight: MediaQuery.of(context).size.height,
@@ -65,13 +73,15 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                   Column(
                     children: [
                       Image.asset('assets/logo.png', height: screenHeight / 6),
-                      nameController.text.isEmpty ? Text(
-                        'Bienvenue!',
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.08,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ) : SizedBox.shrink(),
+                      nameController.text.isEmpty
+                          ? Text(
+                              'Bienvenue!',
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.08,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : SizedBox.shrink(),
                       Text(
                         'Configurons votre piscine pour un suivi optimal.',
                         style: TextStyle(fontSize: screenWidth * 0.03),
@@ -135,7 +145,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                             ),
                             // Text('Type piscine'),
                             // SizedBox(height: 10),
-                            DropdownButtonFormField<String>(
+                            DropdownButtonFormField<TypePool>(
                               value: typePool,
                               style: TextStyle(color: Colors.white),
                               dropdownColor: const Color.fromARGB(
@@ -162,21 +172,16 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                                   ),
                                 ),
                               ),
-                              items:
-                                  [
-                                        "Coque",
-                                        "Béton",
-                                        "Liner",
-                                        "Membrane",
-                                        "Hors-sol",
-                                      ]
-                                      .map(
-                                        (item) => DropdownMenuItem(
-                                          value: item,
-                                          child: Text(item),
-                                        ),
-                                      )
-                                      .toList(),
+                              items: TypePool.values
+                                  .map(
+                                    (type) => DropdownMenuItem<TypePool>(
+                                      value: type,
+                                      child: Text(
+                                        type.toString().split('.').last,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (value) {
                                 setState(() {
                                   typePool = value;
@@ -191,30 +196,114 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                             ),
                             Row(
                               children: [
-                                ...['Longueur', 'Largeur', 'Profondeur'].map(
-                                  (item) => Expanded(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                      ),
-                                      child: TextField(
-                                        decoration: InputDecoration(
-                                          hintText: item,
-                                          hintStyle: TextStyle(
-                                            color: const Color.fromARGB(
-                                              255,
-                                              116,
-                                              116,
-                                              116,
-                                            ),
-                                            fontSize: screenWidth * 0.03,
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    child: TextField(
+                                      controller: lengthController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Longueur (m)',
+                                        labelText: 'Longueur (m)',
+                                        labelStyle: TextStyle(
+                                          color: const Color.fromARGB(
+                                            255,
+                                            116,
+                                            116,
+                                            116,
                                           ),
+                                          fontSize: screenWidth * 0.03,
                                         ),
-                                        style: TextStyle(
-                                          color: Colors.white,
+                                        hintStyle: TextStyle(
+                                          color: const Color.fromARGB(
+                                            255,
+                                            116,
+                                            116,
+                                            116,
+                                          ),
                                           fontSize: screenWidth * 0.03,
                                         ),
                                       ),
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: screenWidth * 0.03,
+                                      ),
+                                      onChanged: (value) => onChangedVolume()
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    child: TextField(
+                                      controller: widthController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Largeur (m)',
+                                        labelText: 'Largeur (m)',
+                                        labelStyle: TextStyle(
+                                          color: const Color.fromARGB(
+                                            255,
+                                            116,
+                                            116,
+                                            116,
+                                          ),
+                                          fontSize: screenWidth * 0.03,
+                                        ),
+                                        hintStyle: TextStyle(
+                                          color: const Color.fromARGB(
+                                            255,
+                                            116,
+                                            116,
+                                            116,
+                                          ),
+                                          fontSize: screenWidth * 0.03,
+                                        ),
+                                      ),
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: screenWidth * 0.03,
+                                      ),
+                                      onChanged: (value) => onChangedVolume()
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    child: TextField(
+                                      controller: depthController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Profondeur (m)',
+                                        labelText: 'Profondeur (m)',
+                                        labelStyle: TextStyle(
+                                          color: const Color.fromARGB(
+                                            255,
+                                            116,
+                                            116,
+                                            116,
+                                          ),
+                                          fontSize: screenWidth * 0.03,
+                                        ),
+                                        hintStyle: TextStyle(
+                                          color: const Color.fromARGB(
+                                            255,
+                                            116,
+                                            116,
+                                            116,
+                                          ),
+                                          fontSize: screenWidth * 0.03,
+                                        ),
+                                      ),
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: screenWidth * 0.03,
+                                      ),
+                                      onChanged: (value) => onChangedVolume()
                                     ),
                                   ),
                                 ),
@@ -224,11 +313,11 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                               children: [
                                 Expanded(
                                   child: Slider(
-                                    value: volumePool,
+                                    value: volumePool ?? 0,
                                     min: 0,
                                     max: 100,
                                     divisions: 10,
-                                    label: volumePool.toString(),
+                                    label: volumePool?.toString() ?? '0',
                                     activeColor: Colors.blue,
                                     inactiveColor: Colors.grey,
                                     onChanged: (value) {

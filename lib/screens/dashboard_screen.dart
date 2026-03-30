@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/screens/analyse_screen.dart';
 import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
 import 'package:sunnypool_app/screens/historique_analyses.dart';
@@ -15,6 +16,14 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  Pool pool = Pool(
+    id: '1',
+    name: 'Ma Piscine',
+    type: TypePool.coque,
+    dimension: Dimension(length: 8, width: 4, depth: 1.5),
+    description: 'Piscine familiale dans le jardin',
+  );
+
   List<String> pools = [];
   List<String> maintenanceChecked = [];
   List<String> maintenance = [
@@ -25,8 +34,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     "entretien 5",
   ];
 
-  String namePool = 'Ma Piscine';
-  double volumePool = 32;
   Map<String, dynamic> traitement = {'product': 'Chlore', 'percent': 0.7};
   double temperature = 29;
   List temps = ['Ensoleillé', 'Vent faible'];
@@ -173,7 +180,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ],
                             ),
-                            body: ConfigurationpiscineScreen(namePool: namePool, volumePool: volumePool, traitementChecked: [traitement['product']]),
+                            body: ConfigurationpiscineScreen(pool: pool, traitementChecked: [traitement['product']]),
                           ),
                         ),
                       );
@@ -193,7 +200,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              namePool,
+                              pool.name,
                               style: TextStyle(
                                 color: const Color.fromARGB(255, 255, 255, 255),
                                 fontSize: screenWidth * 0.08,
@@ -201,7 +208,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                             Text(
-                              "$volumePool m³",
+                              "${pool.volume} m³",
                               style: TextStyle(
                                 color: const Color.fromARGB(255, 255, 255, 255),
                                 fontSize: screenWidth * 0.07,
