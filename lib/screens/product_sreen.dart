@@ -9,10 +9,30 @@ class ProductScreen extends StatefulWidget {
 }
 
 List<Map<String, dynamic>> listProduct = [
-  {'nameProduct': 'Chlore multifonctions', 'quantity': 5, 'unity': 'litres'},
-  {'nameProduct': 'Ph moins', 'quantity': 5, 'unity': 'litres'},
-  {'nameProduct': 'Ph plus', 'quantity': 5, 'unity': 'litres'},
-  {'nameProduct': 'Sel pour électrolyseur', 'quantity': 25, 'unity': 'kg'},
+  {
+    'nameProduct': 'Chlore multifonctions',
+    'init_quantity': 5,
+    'quantity': 5,
+    'unity': 'litres',
+  },
+  {
+    'nameProduct': 'Ph moins',
+    'init_quantity': 5,
+    'quantity': 5,
+    'unity': 'litres',
+  },
+  {
+    'nameProduct': 'Ph plus',
+    'init_quantity': 5,
+    'quantity': 5,
+    'unity': 'litres',
+  },
+  {
+    'nameProduct': 'Sel pour électrolyseur',
+    'init_quantity': 25,
+    'quantity': 25,
+    'unity': 'kg',
+  },
 ];
 
 class _ProductScreenState extends State<ProductScreen> {
@@ -26,7 +46,7 @@ class _ProductScreenState extends State<ProductScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Équipements',
+          'Mes produits',
           style: TextStyle(color: Colors.yellow),
         ),
         backgroundColor: Colors.black,
@@ -76,20 +96,24 @@ class _ProductScreenState extends State<ProductScreen> {
               ),
               ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: screenHeight * 0.4),
-                child: SingleChildScrollView(child:  ListView(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  children: listProduct
-                      .map((item) => _buildListProduct(item))
-                      .toList(),
-                ),
+                child: SingleChildScrollView(
+                  child: ListView(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    children: listProduct
+                        .map((item) => _buildListProduct(item))
+                        .toList(),
+                  ),
                 ),
               ),
               Column(
                 spacing: 8,
                 children: [
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      print('Continuer');
+                      print(listProduct);
+                    },
                     child: Text(
                       'Continuer',
                       style: TextStyle(
@@ -169,7 +193,7 @@ class _ProductScreenState extends State<ProductScreen> {
                     size: screenWidth * 0.05,
                   ),
                   Text(
-                    '${product['quantity']} ${product['unity']}',
+                    '${product['init_quantity']} ${product['unity']}',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: screenWidth * 0.03,
@@ -194,7 +218,24 @@ class _ProductScreenState extends State<ProductScreen> {
                 child: Row(
                   spacing: 12,
                   children: [
-                    Icon(Icons.remove, color: Colors.amber),
+                    SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            if (product['quantity'] > 0) {
+                              product['quantity'] -= product['init_quantity'];
+                            } else {
+                              product['quantity'] = 0;
+                            }
+                          });
+                        },
+                        icon: Icon(Icons.remove, color: Colors.amber, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                      ),
+                    ),
                     Text(
                       '${product['quantity']} ${product['unity']}',
                       style: TextStyle(
@@ -203,7 +244,20 @@ class _ProductScreenState extends State<ProductScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    Icon(Icons.add, color: Colors.amber),
+                    SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            product['quantity'] += product['init_quantity'];
+                          });
+                        },
+                        icon: Icon(Icons.add, color: Colors.amber, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                      ),
+                    ),
                   ],
                 ),
               ),

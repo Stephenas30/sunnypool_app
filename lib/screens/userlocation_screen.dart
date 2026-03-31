@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
+import 'package:sunnypool_app/utils/user_location.dart';
+import 'package:geolocator/geolocator.dart';
 
 class UserlocationScreen extends StatefulWidget {
   const UserlocationScreen({Key? key}) : super(key: key);
@@ -16,6 +18,48 @@ class _UserlocationScreen extends State<UserlocationScreen> {
   final codePostalController = TextEditingController();
   final villeController = TextEditingController();
   final paysController = TextEditingController();
+
+  bool isLoadingLocation = false;
+  bool locationChecked = false;
+
+  void loadLocation() async {
+    
+    try {
+      setState(() {
+        isLoadingLocation = true;
+      });
+      Map<String, String?> address = await getFullAddress();
+
+      if (address.isNotEmpty) {
+        setState(() {
+          isLoadingLocation = false;
+          locationChecked = true;
+        });
+      }
+
+      adresseController.text = address['street'] ?? '';
+      codePostalController.text = address['postalCode'] ?? '';
+      villeController.text = address['locality'] ?? '';
+      paysController.text = address['country'] ?? '';
+    } catch (e) {
+      print(e);
+    } 
+  }
+
+  void listenerInput() {
+    if (adresseController.text.isNotEmpty &&
+        codePostalController.text.isNotEmpty &&
+        villeController.text.isNotEmpty &&
+        paysController.text.isNotEmpty) {
+      setState(() {
+        locationChecked = true;
+      });
+    } else {
+      setState(() {
+        locationChecked = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,51 +108,94 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                             codePostalController,
                           ),
                           _buildTextField(
-                            Icons.local_activity,
+                            Icons.location_city,
                             'Ville',
                             villeController,
                           ),
-                          _buildTextField(
-                            Icons.local_atm,
-                            'Pays',
-                            paysController,
+                          _buildTextField(Icons.public, 'Pays', paysController),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 60,
+                              vertical: 8,
+                            ),
+                            child: ElevatedButton(
+                              onPressed: loadLocation,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(5),
+                                  ),
+                                ),
+                                side: BorderSide(color: Colors.amber, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  Icon(Icons.gps_fixed, color: Colors.white),
+                                  // SizedBox(width: 10),
+                                  Text(
+                                    'Utiliser ma localisation GPS',
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.03,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  isLoadingLocation ?
+                                  CircularProgressIndicator(
+                                    color: Colors.amber,
+                                    strokeWidth: 1,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.amber,
+                                    ),
+                                  ) : locationChecked ? Icon(Icons.check_circle_sharp, color: Colors.green[600], size: screenWidth * 0.05) : SizedBox.shrink()
+                                ],
+                              ),
+                            ),
                           ),
-                          _buildTextField(
-                            Icons.local_atm,
+
+                          /*                     _buildTextField(
+                            Icons.gps_fixed,
                             'Utiliser ma localisation GPS',
                             paysController,
-                          ),
-                          SizedBox(height: 20,),
+                          ), */
+                          SizedBox(height: 20),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: locationChecked ? () {
                               print('Adresse: ${adresseController.text}');
                               print(
                                 'Code Postal: ${codePostalController.text}',
                               );
                               print('Ville: ${villeController.text}');
                               print('Pays: ${paysController.text}');
+                              print('Location: $locationChecked');
                               Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ConfigurationpiscineScreen(),
-                                ),
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ConfigurationpiscineScreen(),
+                              ),
                               );
-                            },
+                            } : null,
                             child: Text(
                               'Continuer',
                               style: TextStyle(
-                                fontSize: screenWidth * 0.03,
-                                color: Colors.white,
+                              fontSize: screenWidth * 0.03,
+                              color: Colors.white,
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.amber,
+                              backgroundColor: locationChecked ? Colors.amber : Colors.grey,
                               padding: EdgeInsets.symmetric(
-                                horizontal: screenWidth * 0.2,
-                                vertical: screenHeight * 0.01,
+                              horizontal: screenWidth * 0.2,
+                              vertical: screenHeight * 0.01,
                               ),
                             ),
-                          ),
+                            ),
                           SizedBox(height: screenHeight * 0.01),
                           Column(
                             children: [
@@ -168,6 +255,7 @@ class _UserlocationScreen extends State<UserlocationScreen> {
             borderSide: BorderSide(color: Colors.amber, width: 2),
           ),
         ),
+        onChanged: (value) => listenerInput(),
         validator: validator,
         /* validator: (String? value) {
               if (value == null || value.isEmpty) {

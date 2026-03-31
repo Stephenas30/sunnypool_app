@@ -15,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
+  bool _displayPassword = false;
 
   void _login() async {
     if (_formKey.currentState!.validate()) {
@@ -36,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => UserlocationScreen()),
+            MaterialPageRoute(builder: (_) => DashboardScreen()),
           );
         }
       } catch (e) {
@@ -123,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
       {bool obscure = false, String? Function(String?)? validator}) {
     return TextFormField(
       controller: controller,
-      obscureText: obscure,
+      obscureText: obscure && !_displayPassword,
       style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Colors.amber),
@@ -135,6 +136,21 @@ class _LoginScreenState extends State<LoginScreen> {
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: Colors.amber, width: 2),
         ),
+        suffixIcon: obscure
+            ? IconButton(
+                icon: Icon(
+                  _displayPassword
+                      ? Icons.visibility
+                      : Icons.visibility_off,
+                  color: Colors.amber,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _displayPassword = !_displayPassword;
+                  });
+                },
+              )
+            : null,
       ),
       validator: validator,
     );

@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
+import 'package:image_picker/image_picker.dart';
 
 class PhotosScreen extends StatefulWidget {
   const PhotosScreen({Key? key}) : super(key: key);
@@ -12,10 +15,40 @@ class PhotosScreen extends StatefulWidget {
 }
 
 class _PhotosScreenState extends State<PhotosScreen> {
+  final ImagePicker _picker = ImagePicker();
+
+  File? image_ensemble;
+  File? image_eau;
+  File? image_local;
+  File? image_equipements;
+
+    Future<void> _takePhoto(String imageType) async {
+    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    if (photo != null) {
+      setState(() {
+        switch (imageType) {
+          case 'Vue d\'ensemble':
+            image_ensemble = File(photo.path);
+            break;
+          case 'Eau de la piscine':
+            image_eau = File(photo.path);
+            break;
+          case 'Local technique':
+            image_local = File(photo.path);
+            break;
+          case 'Equipements':
+            image_equipements = File(photo.path);
+            break;
+        }
+      });
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    
 
     return Scaffold(
       appBar: AppBar(
@@ -74,10 +107,10 @@ class _PhotosScreenState extends State<PhotosScreen> {
                 child: GridView.count(
                   crossAxisCount: 2,
                   children: [
-                    _buildCardPhoto('Vue d\'ensemble'),
-                    _buildCardPhoto('Eau de la piscine'),
-                    _buildCardPhoto('Local technique'),
-                    _buildCardPhoto('Equipements'),
+                    _buildCardPhoto('Vue d\'ensemble', image_ensemble),
+                    _buildCardPhoto('Eau de la piscine', image_eau),
+                    _buildCardPhoto('Local technique', image_local),
+                    _buildCardPhoto('Equipements', image_equipements),
                   ],
                 ),
             ),
@@ -140,7 +173,13 @@ class _PhotosScreenState extends State<PhotosScreen> {
                 ),
               ),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  print('Confirmer et continuer');
+                  print('Image ensemble: ${image_ensemble?.path}');
+                  print('Image eau: ${image_eau?.path}');
+                  print('Image local: ${image_local?.path}');
+                  print('Image equipements: ${image_equipements?.path}');
+                },
                 child: Text(
                   'Confirmer et continuer',
                   style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.03),
@@ -182,21 +221,34 @@ class _PhotosScreenState extends State<PhotosScreen> {
     );
   }
 
-  Widget _buildCardPhoto(String title) {
+  Widget _buildCardPhoto(String title,File? image) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    return Container(
-      margin: EdgeInsets.all(8),
+    return Padding(padding: EdgeInsets.all(8), 
+      //padding: EdgeInsets.all(8),
+      child: ElevatedButton(
+      /* margin: EdgeInsets.all(8),
       padding: EdgeInsets.all(0),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.amber),
         borderRadius: BorderRadius.all(Radius.circular(20)),
+      ), */
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        padding: EdgeInsets.all(0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.amber),
+        ),
       ),
+      onPressed: () {
+        _takePhoto(title);
+      },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(title, style: TextStyle(fontSize: screenWidth*0.03),),
+          Text(title, style: TextStyle(fontSize: screenWidth*0.03, color: Colors.white),),
           Stack(
             children: [
               Column(
@@ -209,7 +261,12 @@ class _PhotosScreenState extends State<PhotosScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
+                      child: image.toString() != 'null' ? Image.file(
+                        image!,
+                        fit: BoxFit.cover,
+                        height: screenHeight * 0.08,
+                        width: screenWidth * 0.5,
+                      ) : Image.asset(
                         'assets/piscine.png',
                         fit: BoxFit.cover,
                         height: screenHeight * 0.08,
@@ -217,7 +274,7 @@ class _PhotosScreenState extends State<PhotosScreen> {
                       ),
                     ),
                   ),
-                  Text('Ajouter une photo', style: TextStyle(fontSize: screenWidth*0.03)),
+                  Text('Ajouter une photo', style: TextStyle(fontSize: screenWidth*0.03, color: Colors.white),),
                 ],
               ),
 
@@ -241,6 +298,7 @@ class _PhotosScreenState extends State<PhotosScreen> {
           ),
         ],
       ),
+    )
     );
   }
 }

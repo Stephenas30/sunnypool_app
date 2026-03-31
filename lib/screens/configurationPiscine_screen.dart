@@ -63,7 +63,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
               : EdgeInsets.zero,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              //minHeight: MediaQuery.of(context).size.height,
+              minHeight: nameController.text.isEmpty ? MediaQuery.of(context).size.height : 0,
             ),
             child: IntrinsicHeight(
               child: Column(

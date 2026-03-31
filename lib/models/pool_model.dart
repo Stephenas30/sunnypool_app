@@ -21,6 +21,14 @@ enum Traitement {
   uv,
 }
 
+enum Equipement {
+  pac, 
+  robot,
+  spotsLed,
+  volet,
+  bache
+}
+
 class Pool {
   final String id;
   final String name;
