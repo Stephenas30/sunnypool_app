@@ -4,25 +4,38 @@ import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/screens/analyse_screen.dart';
 import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
 import 'package:sunnypool_app/screens/historique_analyses.dart';
+import 'package:sunnypool_app/screens/mypiscine_screen.dart';
 import 'package:sunnypool_app/screens/photos_screen.dart';
 import 'package:sunnypool_app/screens/planning_entretien_screen.dart';
 import 'package:sunnypool_app/screens/product_sreen.dart';
 import 'package:sunnypool_app/screens/tutorals_screen.dart';
+import 'package:sunnypool_app/utils/list_piscine.dart';
 import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
+  final Pool? pool;
+  DashboardScreen({Key? key, this.pool}) : super(key: key);
+
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  Pool pool = Pool(
+  Pool? checkPool;
+
+  @override
+  void initState() {
+    super.initState();
+    checkPool = widget.pool ?? listPiscines.first;
+  }
+
+  /* Pool pool = Pool(
     id: '1',
     name: 'Ma Piscine',
     type: TypePool.coque,
     dimension: Dimension(length: 8, width: 4, depth: 1.5),
     description: 'Piscine familiale dans le jardin',
-  );
+  ); */
 
   List<String> pools = [];
   List<String> maintenanceChecked = [];
@@ -97,6 +110,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               SizedBox(height: 40),
               Image.asset("assets/logo.png", height: 150),
+              _buildMenuItem(
+                Icons.pool,
+                "Mes piscines",
+                MypiscineScreen(),
+              ),
               _buildMenuItem(
                 Icons.science,
                 "Analyse de l'eau",
@@ -180,7 +198,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ],
                             ),
-                            body: ConfigurationpiscineScreen(pool: pool, traitementChecked: [traitement['product']]),
+                            body: ConfigurationpiscineScreen(pool: checkPool, traitementChecked: [traitement['product']]),
                           ),
                         ),
                       );
@@ -200,7 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              pool.name,
+                              checkPool?.name ?? "Nom de la piscine",
                               style: TextStyle(
                                 color: const Color.fromARGB(255, 255, 255, 255),
                                 fontSize: screenWidth * 0.08,
@@ -208,7 +226,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                             Text(
-                              "${pool.volume} m³",
+                              "${checkPool?.volume} m³",
                               style: TextStyle(
                                 color: const Color.fromARGB(255, 255, 255, 255),
                                 fontSize: screenWidth * 0.07,
