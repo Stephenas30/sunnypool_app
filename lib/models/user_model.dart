@@ -1,6 +1,6 @@
 class Location {
-  final String latitude;
-  final String longitude;
+  final double latitude;
+  final double longitude;
 
   Location({
     required this.latitude,

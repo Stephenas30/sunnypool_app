@@ -1,3 +1,5 @@
+import 'package:sunnypool_app/models/user_model.dart';
+
 enum Pompe { standard, variable }
 
 enum TypeFiltre { sable, verre, cartouche, diatomee }
@@ -70,6 +72,7 @@ class Pool {
   final Automation? automation;
   final Equipement? equipement;
   final PhotoPool? photoPool;
+  final Location location;
 
   Pool({
     this.id,
@@ -83,6 +86,7 @@ class Pool {
     this.equipement,
     this.filtration,
     this.photoPool,
+    required this.location,
   });
 
   double get volume => dimension.length * dimension.width * dimension.depth;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sunnypool_app/models/pool_model.dart';
@@ -9,6 +11,7 @@ import 'package:sunnypool_app/screens/photos_screen.dart';
 import 'package:sunnypool_app/screens/planning_entretien_screen.dart';
 import 'package:sunnypool_app/screens/product_sreen.dart';
 import 'package:sunnypool_app/screens/tutorals_screen.dart';
+import 'package:sunnypool_app/services/meteo_service.dart';
 import 'package:sunnypool_app/utils/list_piscine.dart';
 import 'profile_screen.dart';
 
@@ -21,12 +24,27 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  late Future<Map<String, dynamic>> weatherFuture;
   Pool? checkPool;
+  Timer? timer;
 
   @override
   void initState() {
     super.initState();
     checkPool = widget.pool ?? listPiscines.first;
+    weatherFuture = getWeather(
+      checkPool!.location.latitude,
+      checkPool!.location.longitude,
+    );
+
+    timer = Timer.periodic(Duration(seconds: 30), (timer) {
+      setState(() {
+        weatherFuture = getWeather(
+          checkPool!.location.latitude,
+          checkPool!.location.longitude,
+        );
+      });
+    });
   }
 
   /* Pool pool = Pool(
@@ -110,11 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               SizedBox(height: 40),
               Image.asset("assets/logo.png", height: 150),
-              _buildMenuItem(
-                Icons.pool,
-                "Mes piscines",
-                MypiscineScreen(),
-              ),
+              _buildMenuItem(Icons.pool, "Mes piscines", MypiscineScreen()),
               _buildMenuItem(
                 Icons.science,
                 "Analyse de l'eau",
@@ -125,10 +139,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 "Diagnostic photo",
                 PhotosScreen(),
               ),
-              _buildMenuItem(Icons.history, "Historique des analyses", HistoriqueAnalyses()),
+              _buildMenuItem(
+                Icons.history,
+                "Historique des analyses",
+                HistoriqueAnalyses(),
+              ),
               _buildMenuItem(Icons.chat, "Parler à Sunny"),
               _buildMenuItem(Icons.inventory, "Mes produits", ProductScreen()),
-              _buildMenuItem(Icons.calendar_today, "Planning d'entretien", PlanningEntretienScreen()),
+              _buildMenuItem(
+                Icons.calendar_today,
+                "Planning d'entretien",
+                PlanningEntretienScreen(),
+              ),
               _buildMenuItem(Icons.school, "Tutoriels", TutoralsScreen()),
             ],
           ),
@@ -198,7 +220,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ],
                             ),
-                            body: ConfigurationpiscineScreen(pool: checkPool, traitementChecked: [traitement['product']]),
+                            body: ConfigurationpiscineScreen(
+                              pool: checkPool,
+                              traitementChecked: [traitement['product']],
+                            ),
                           ),
                         ),
                       );
@@ -279,13 +304,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             color: Colors.amber,
                             size: screenHeight * 0.05,
                           ),
-                          Text(
-                            "$temperature°C",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: screenWidth * 0.07,
-                              // fontWeight: FontWeight.bold,
-                            ),
+                          FutureBuilder(
+                            future: weatherFuture,
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData)
+                                return CircularProgressIndicator();
+
+                              final weather = snapshot.data!['current_weather'];
+
+                              return Text(
+                                '${weather['temperature']}°C',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: screenWidth * 0.07,
+                                  // fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
