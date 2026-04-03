@@ -91,5 +91,5 @@ class Pool {
 
   double get volume => dimension.length * dimension.width * dimension.depth;
   String get getPool =>
-      '$name : \nType: $type \nDimension: ${dimension.width} * ${dimension.length} * ${dimension.depth}';
+      '\nNom: $name \nType: $type \nDimension: ${dimension.width} * ${dimension.length} * ${dimension.depth} \nTraitement: $traitements \nHydraulique: Skim - ${hydraulique?.skimmers} \t Refoul - ${hydraulique?.refoulement} \t Prise balai - ${hydraulique?.priseBalai} \tBonde de Fond - ${hydraulique?.bondeFond} \nFiltration: Pompe - ${filtration?.pompe} \tPuissance - ${filtration?.puissance} \tType - ${filtration?.type} \nPhoto: Bassin - ${photoPool?.photoBassin} \tEnv - ${photoPool?.photoEnvironnement} \tLocal - ${photoPool?.photoLocalTechn} \nLocation: lat - ${location.latitude} \tlong - ${location.longitude}';
 }

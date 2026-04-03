@@ -25,6 +25,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late Future<Map<String, dynamic>> weatherFuture;
+  //late Future<dynamic> allPool;
   Pool? checkPool;
   Timer? timer;
 

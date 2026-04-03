@@ -8,7 +8,7 @@ Pool pool1 = Pool(
   location: Location(latitude: -18.8792, longitude: 47.5079),
 );
 
-Pool pool2 = Pool(
+/* Pool pool2 = Pool(
   name: "Piscine 2",
   type: TypePool.horsSol,
   dimension: Dimension(length: 4, width: 2.5, depth: 1.2),
@@ -20,6 +20,6 @@ Pool pool3 = Pool(
   type: TypePool.beton,
   dimension: Dimension(length: 6, width: 4, depth: 1.8),
   location: Location(latitude: -10.1222, longitude: 48.5079),
-);
+); */
 
-List<Pool> listPiscines = [pool1, pool2, pool3];
+List<Pool> listPiscines = [pool1,/*  pool2, pool3 */];

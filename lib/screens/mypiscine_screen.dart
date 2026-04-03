@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:sunnypool_app/models/pool_model.dart';
+import 'package:sunnypool_app/models/user_model.dart';
 import 'package:sunnypool_app/screens/add_piscine_screen.dart';
 import 'package:sunnypool_app/screens/dashboard_screen.dart';
+import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/utils/list_piscine.dart';
+import 'package:sunnypool_app/utils/token_storage.dart';
 
 class MypiscineScreen extends StatefulWidget {
   const MypiscineScreen({super.key});
@@ -13,6 +16,35 @@ class MypiscineScreen extends StatefulWidget {
 
 class _MypiscineScreen extends State<MypiscineScreen> {
   List<Pool> piscines = listPiscines;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    List<Pool> fetchPool = [];
+    TokenStorage.getToken().then((tokenValue) {
+      print(tokenValue);
+      PoolService().getAllPool(tokenValue.toString()).then((
+        Map<String, dynamic> pools,
+      ) {
+        List.generate(pools['data'].length, (item) {
+          Pool pool = Pool(
+            name: pools['data'][item]['titre'],
+            type:
+                /* pools['data'][item]['caracteristiques']['type'] ?? */
+                TypePool.beton,
+            dimension: Dimension(length: 2, width: 5, depth: 3.2),
+            location: Location(latitude: -18.5552, longitude: 23.4578),
+          );
+          fetchPool.add(pool);
+        });
+        print(fetchPool);
+        setState(() {
+          piscines = fetchPool;
+        });
+      });
+    });
+  }
 
   void addArticle(Pool pool) {
     setState(() {
@@ -70,13 +102,14 @@ class _MypiscineScreen extends State<MypiscineScreen> {
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 50),
                   itemCount: piscines.length,
                   itemBuilder: (context, index) {
                     return ListTile(
                       title: Text(
                         piscines[index].name,
                         style: TextStyle(color: Colors.white),
+                        textAlign: TextAlign.center,
                       ),
                       onTap: () {
                         // Naviguer vers les détails de la piscine

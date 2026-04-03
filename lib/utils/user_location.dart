@@ -26,6 +26,8 @@ Future<Map<String, String?>> getFullAddress() async {
       "postalCode": place.postalCode,
       "locality": place.locality,
       "country": place.country,
+      "latitude": pos.latitude.toString(),
+      "longitude": pos.longitude.toString(),
     };
     /* print("Adresse complète: ${place.street}");
     print("Code postal: ${place.postalCode}");

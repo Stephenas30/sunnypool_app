@@ -1,10 +1,18 @@
 class Location {
   final double latitude;
   final double longitude;
+  final String? adresse;
+  final int? codePostal;
+  final String? ville;
+  final String? pays;
 
   Location({
     required this.latitude,
-    required this.longitude
+    required this.longitude,
+    this.adresse,
+    this.codePostal,
+    this.ville,
+    this.pays,
   });
 }
 

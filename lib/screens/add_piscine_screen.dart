@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sunnypool_app/models/pool_model.dart';
+import 'package:sunnypool_app/models/user_model.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
+import 'package:sunnypool_app/services/pool_service.dart';
+import 'package:sunnypool_app/utils/token_storage.dart';
 import 'package:sunnypool_app/utils/user_location.dart';
 import 'package:sunnypool_app/widget/custom_stepper.dart';
 
@@ -21,6 +24,7 @@ class AddPiscineScreen extends StatefulWidget {
 class _AddPiscineScreen extends State<AddPiscineScreen> {
   final _formKey = GlobalKey<FormState>();
   final _formKey2 = GlobalKey<FormState>();
+  final ImagePicker _picker = ImagePicker();
 
   int _currentStep = 0;
 
@@ -29,34 +33,33 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   final widthController = TextEditingController();
   final depthController = TextEditingController();
 
+  final nbrSkimmersController = TextEditingController();
+  final nbrRefoulementController = TextEditingController();
+  final puissancePompeController = TextEditingController();
+
   final adresseController = TextEditingController();
   final codePostalController = TextEditingController();
   final villeController = TextEditingController();
   final paysController = TextEditingController();
 
-  bool isLoadingLocation = false;
-  bool locationChecked = false;
-
   Pool? pool;
+
   TypePool typePool = TypePool.beton;
   double? volumePool;
-  List<String> traitementChecked = ['Chlore'];
 
-  final ImagePicker _picker = ImagePicker();
+  bool priseBalai = false;
+  BondeFond bondeFond = BondeFond.non;
+  Pompe pompe = Pompe.standard;
+  TypeFiltre typeFiltre = TypeFiltre.sable;
+
+  List<Traitement> traitementChecked = [Traitement.chlore];
 
   File? image_ensemble;
   File? image_eau;
   File? image_local;
   File? image_equipements;
 
-  void onChangedVolume() {
-    final length = double.tryParse(lengthController.text) ?? 0;
-    final width = double.tryParse(widthController.text) ?? 0;
-    final depth = double.tryParse(depthController.text) ?? 0;
-    setState(() {
-      volumePool = length * width * depth;
-    });
-  }
+  Location? location;
 
   Future<void> _takePhoto(String imageType) async {
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
@@ -80,42 +83,56 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     }
   }
 
-  void loadLocation() async {
-    try {
-      setState(() {
-        isLoadingLocation = true;
-      });
-      Map<String, String?> address = await getFullAddress();
-
-      if (address.isNotEmpty) {
-        setState(() {
-          isLoadingLocation = false;
-          locationChecked = true;
-        });
-      }
-
-      adresseController.text = address['street'] ?? '';
-      codePostalController.text = address['postalCode'] ?? '';
-      villeController.text = address['locality'] ?? '';
-      paysController.text = address['country'] ?? '';
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  void listenerInput() {
-    if (adresseController.text.isNotEmpty &&
-        codePostalController.text.isNotEmpty &&
-        villeController.text.isNotEmpty &&
-        paysController.text.isNotEmpty) {
-      setState(() {
-        locationChecked = true;
-      });
-    } else {
-      setState(() {
-        locationChecked = false;
-      });
-    }
+  void _submitPool() {
+/*     if (_formKey.currentState!.validate() &&
+        _formKey2.currentState!.validate()) { */
+      final newPool = Pool(
+        name: nameController.text,
+        type: typePool,
+        dimension: Dimension(
+          length: double.tryParse(lengthController.text) ?? 0,
+          width: double.tryParse(widthController.text) ?? 0,
+          depth: double.tryParse(depthController.text) ?? 0,
+        ),
+        traitements: traitementChecked,
+            /* .map((t) => Traitement(type: t, dateDernierTraitement: DateTime.now()))
+            .toList(), */
+        hydraulique: Hydraulique(
+          skimmers: int.tryParse(nbrSkimmersController.text) ?? 0,
+          refoulement: int.tryParse(nbrRefoulementController.text) ?? 0,
+          priseBalai: priseBalai,
+          bondeFond: bondeFond,
+        ),
+        filtration: Filtration(
+          pompe: pompe,
+          puissance: double.tryParse(puissancePompeController.text) ?? 0,
+          type: typeFiltre,
+        ),
+        photoPool: PhotoPool(
+          photoBassin: image_ensemble?.path ?? '',
+          photoEnvironnement: image_eau?.path ?? '',
+          photoLocalTechn: image_local?.path ?? '',
+        ),
+        location: Location(
+          latitude: location?.latitude ?? 0,
+          longitude: location?.longitude ?? 0,
+          adresse: adresseController.text,
+          codePostal: int.parse(codePostalController.text),
+          pays: paysController.text,
+          ville: villeController.text
+        ),
+      );
+      //print(newPool.getPool);
+      TokenStorage.getToken().then((token) => 
+      PoolService().addPool(token.toString(), newPool).then((value) => {
+        print(value),
+        widget.onAddPool(newPool),
+        Navigator.pop(context)
+      })
+      );
+      
+      
+    // }
   }
 
   void _nextStep() {
@@ -195,6 +212,15 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   Widget _buildFormPool() {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
+    void onChangedVolume() {
+      final length = double.tryParse(lengthController.text) ?? 0;
+      final width = double.tryParse(widthController.text) ?? 0;
+      final depth = double.tryParse(depthController.text) ?? 0;
+      setState(() {
+        volumePool = length * width * depth;
+      });
+    }
 
     return SingleChildScrollView(
       child: /* Padding(
@@ -418,7 +444,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                           'Hydraulique',
                           style: TextStyle(
                             fontSize: screenWidth * 0.05,
-                            decoration: TextDecoration.overline,
+                            decoration: TextDecoration.underline,
                           ),
                         ),
                         Row(
@@ -427,7 +453,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                               child: Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 10),
                                 child: TextField(
-                                  controller: lengthController,
+                                  controller: nbrSkimmersController,
                                   decoration: InputDecoration(
                                     hintText: 'Nbr de skimmers',
                                     labelText: 'Nbr de skimmers',
@@ -461,7 +487,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                               child: Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 10),
                                 child: TextField(
-                                  controller: widthController,
+                                  controller: nbrRefoulementController,
                                   decoration: InputDecoration(
                                     hintText: 'Nbr de refoulement',
                                     labelText: 'Nbr de refoulement',
@@ -534,9 +560,9 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                                   )
                                   .toList(),
                               onChanged: (value) {
-                                /* setState(() {
-                          typePool = value ?? TypePool.beton;
-                        }); */
+                                setState(() {
+                                  priseBalai = value ?? false;
+                                });
                               },
                               validator: (value) {
                                 if (value == null) {
@@ -590,9 +616,9 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                                   )
                                   .toList(),
                               onChanged: (value) {
-                                /* setState(() {
-                          typePool = value ?? TypePool.beton;
-                        }); */
+                                setState(() {
+                                  bondeFond = value ?? BondeFond.non;
+                                });
                               },
                               validator: (value) {
                                 if (value == null) {
@@ -613,7 +639,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                           'Filtration',
                           style: TextStyle(
                             fontSize: screenWidth * 0.05,
-                            decoration: TextDecoration.overline,
+                            decoration: TextDecoration.underline,
                           ),
                         ),
                         Row(
@@ -657,9 +683,9 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                                     )
                                     .toList(),
                                 onChanged: (value) {
-                                  /* setState(() {
-                          typePool = value ?? TypePool.beton;
-                        }); */
+                                  setState(() {
+                                    pompe = value ?? Pompe.standard;
+                                  });
                                 },
                                 validator: (value) {
                                   if (value == null) {
@@ -673,7 +699,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                               child: Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 10),
                                 child: TextField(
-                                  controller: lengthController,
+                                  controller: puissancePompeController,
                                   decoration: InputDecoration(
                                     hintText: 'Puissance de Pompe',
                                     labelText: 'Puissance de Pompe',
@@ -742,9 +768,9 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                                     )
                                     .toList(),
                                 onChanged: (value) {
-                                  /* setState(() {
-                          typePool = value ?? TypePool.beton;
-                        }); */
+                                  setState(() {
+                                    typeFiltre = value ?? TypeFiltre.sable;
+                                  });
                                 },
                                 validator: (value) {
                                   if (value == null) {
@@ -772,7 +798,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                         direction: Axis.horizontal,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         spacing: 10,
-                        children: ['Chlore', 'Brome', 'Sel', 'Autre']
+                        children: Traitement.values
                             .map(
                               (item) => Expanded(
                                 child: ElevatedButton(
@@ -805,7 +831,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            item,
+                                            item.name,
                                             style: TextStyle(
                                               fontSize: screenWidth * 0.03,
                                             ),
@@ -948,47 +974,97 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     );
   }
 
-  Widget _buildTextField(
-    IconData icon,
-    String title,
-    TextEditingController? controller, {
-    bool obscure = false,
-    String? Function(String?)? validator,
-  }) {
+  Widget _buildFormLocation() {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    return /* Padding(
+
+    bool isLoadingLocation = false;
+    bool locationChecked = false;
+
+    void loadLocation() async {
+      try {
+        setState(() {
+          isLoadingLocation = true;
+        });
+        Map<String, String?> address = await getFullAddress();
+
+        if (address.isNotEmpty) {
+          setState(() {
+            isLoadingLocation = false;
+            locationChecked = true;
+            location = Location(
+              latitude: double.parse(address['latitude'] ?? '0'),
+              longitude: double.parse(address['longitude'] ?? '0'),
+              adresse: address['street'] ?? '',
+              codePostal: int.parse(address['postalCode'] ?? '0'),
+              ville: address['locality'] ?? '',
+              pays: address['country'] ?? ''
+            );
+          });
+        }
+
+        adresseController.text = address['street'] ?? '';
+        codePostalController.text = address['postalCode'] ?? '';
+        villeController.text = address['locality'] ?? '';
+        paysController.text = address['country'] ?? '';
+      } catch (e) {
+        print(e);
+      }
+    }
+
+    void listenerInput() {
+      if (adresseController.text.isNotEmpty &&
+          codePostalController.text.isNotEmpty &&
+          villeController.text.isNotEmpty &&
+          paysController.text.isNotEmpty) {
+        setState(() {
+          locationChecked = true;
+        });
+      } else {
+        setState(() {
+          locationChecked = false;
+        });
+      }
+    }
+
+    Widget _buildTextField(
+      IconData icon,
+      String title,
+      TextEditingController? controller, {
+      bool obscure = false,
+      String? Function(String?)? validator,
+    }) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      final screenHeight = MediaQuery.of(context).size.height;
+      return /* Padding(
       padding: EdgeInsets.symmetric(horizontal: 60, vertical: 8),
       child: */ TextFormField(
-      controller: controller,
-      obscureText: obscure,
-      style: TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: Colors.amber),
-        labelText: title,
-        labelStyle: TextStyle(color: Colors.amber),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.amber),
+        controller: controller,
+        obscureText: obscure,
+        style: TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: Colors.amber),
+          labelText: title,
+          labelStyle: TextStyle(color: Colors.amber),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.amber),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.amber, width: 2),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.amber, width: 2),
-        ),
-      ),
-      onChanged: (value) => listenerInput(),
-      validator: validator,
-      /* validator: (String? value) {
+        onChanged: (value) => listenerInput(),
+        validator: validator,
+        /* validator: (String? value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter some text';
               }
               return null;
             }, */
-      // ),
-    );
-  }
+        // ),
+      );
+    }
 
-  Widget _buildFormLocation() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     return Form(
       key: _formKey2,
       child: Column(
@@ -1058,141 +1134,92 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-     final List<String> steps = [
-    "Piscine",
-    "Traitements",
-    "Photos",
-    "Ajouter",
-  ];
+    final List<String> steps = ["Piscine", "Traitements", "Photos", "Ajouter"];
 
     return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            CustomStepper(
-              currentStep: _currentStep,
-              steps: steps,
-              onStepTapped: (index) {
-                setState(() => _currentStep = index);
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          CustomStepper(
+            currentStep: _currentStep,
+            steps: steps,
+            onStepTapped: (index) {
+              setState(() => _currentStep = index);
+            },
+          ),
+
+          const SizedBox(height: 30),
+
+          Expanded(
+            child: Center(
+              child: switch (_currentStep) {
+                0 => _buildFormPool(),
+                1 => _buildFormTraitement(),
+                2 => _buildFormPhoto(),
+                3 => _buildFormLocation(),
+                _ => Container(),
               },
             ),
+          ),
 
-            const SizedBox(height: 30),
-
-            Expanded(
-              child: Center(
-                child: switch (_currentStep) {
-                  0 => _buildFormPool(),
-                  1 => _buildFormTraitement(),
-                  2 => _buildFormPhoto(),
-                  3 => _buildFormLocation(),
-                  _ => Container(),
-                },
-              ),
-            ),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: _prevStep,
-                  child: Text("Retour"),
-                ),
-                ElevatedButton(
-                  onPressed: _nextStep,
-                  child: Text("Suivant"),
-                ),
-              ],
-            )
-          ],
-        ),
-      );
-  }
-}
-
-
-/* Stepper(
-        type: StepperType.horizontal,
-        currentStep: _currentStep,
-        onStepContinue: _nextStep,
-        onStepCancel: _prevStep,
-        controlsBuilder: (context, details) {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              ElevatedButton(
-                onPressed: details.onStepContinue,
-                child: Text(
-                  "Suivant",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: screenWidth * 0.03,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.1,
-                    vertical: screenHeight * 0.01,
-                  ),
-                ),
-              ),
               _currentStep > 0
-                  ? TextButton(
-                      onPressed: details.onStepCancel,
+                  ? ElevatedButton(
+                      onPressed: _prevStep,
                       child: Text(
                         "Retour",
                         style: TextStyle(color: Colors.white),
                       ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        /* padding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 16), */
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                        ),
+                        side: BorderSide(color: Colors.amber, width: 1),
+                      ),
                     )
-                  : Container(),
+                  : SizedBox.shrink(),
+              _currentStep < steps.length - 1
+                  ? ElevatedButton(
+                      onPressed: _nextStep,
+                      child: Text(
+                        "Suivant",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        /* padding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 16), */
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                        ),
+                        side: BorderSide(color: Colors.amber, width: 1),
+                      ),
+                    )
+                  : ElevatedButton(
+                      onPressed: _submitPool,
+                      child: Text(
+                        "Ajouter",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        /* padding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 16), */
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                        ),
+                        side: BorderSide(color: Colors.amber, width: 1),
+                      ),
+                    ),
             ],
-          );
-        },
-        margin: EdgeInsets.all(20),
-        steps: [
-          Step(
-            title: Text(
-              "Piscine",
-              style: TextStyle(fontSize: screenWidth * 0.03),
-            ),
-            stepStyle: StepStyle(
-              color: _currentStep == 0 ? Colors.amber : Colors.grey,
-            ),
-            content: _buildFormPool(),
-          ),
-          /* ), */
-          Step(
-            title: Text(
-              "Traitements",
-              style: TextStyle(fontSize: screenWidth * 0.03),
-            ),
-            stepStyle: StepStyle(
-              color: _currentStep == 1 ? Colors.amber : Colors.grey,
-            ),
-            content: _buildFormTraitement(),
-          ),
-          Step(
-            title: Text(
-              "Photos",
-              style: TextStyle(fontSize: screenWidth * 0.03),
-            ),
-            stepStyle: StepStyle(
-              color: _currentStep == 2 ? Colors.amber : Colors.grey,
-            ),
-            content: _buildFormPhoto(),
-          ),
-
-          Step(
-            title: Text(
-              "Ajouter",
-              style: TextStyle(fontSize: screenWidth * 0.03),
-            ),
-            stepStyle: StepStyle(
-              color: _currentStep == 3 ? Colors.amber : Colors.grey,
-            ),
-            content: _buildFormLocation(),
           ),
         ],
-    ); */
+      ),
+    );
+  }
+}
