@@ -7,6 +7,13 @@ import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/utils/list_piscine.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
 
+double parseDouble(dynamic value) {
+  if (value == null) return 0.0; // ou null selon ton besoin
+  if (value is num) return value.toDouble(); // déjà un int/double
+  if (value is String) return double.tryParse(value) ?? 0.0; // parse String
+  return 0.0; // valeur par défaut si autre type inattendu
+}
+
 class MypiscineScreen extends StatefulWidget {
   const MypiscineScreen({super.key});
 
@@ -28,13 +35,25 @@ class _MypiscineScreen extends State<MypiscineScreen> {
         Map<String, dynamic> pools,
       ) {
         List.generate(pools['data'].length, (item) {
+          print(pools['data'][item]);
           Pool pool = Pool(
-            name: pools['data'][item]['titre'],
+            name: pools['data'][item]['name'],
             type:
                 /* pools['data'][item]['caracteristiques']['type'] ?? */
                 TypePool.beton,
-            dimension: Dimension(length: 2, width: 5, depth: 3.2),
-            location: Location(latitude: -18.5552, longitude: 23.4578),
+            dimension: Dimension(
+              length: parseDouble(pools['data'][item]['dimension']['length']),
+              width: parseDouble(pools['data'][item]['dimension']['width']),
+              depth: parseDouble(pools['data'][item]['dimension']['depth']),
+            ),
+            location: Location(
+              latitude: parseDouble(
+                pools['data'][item]['location']['latitude'],
+              ),
+              longitude: parseDouble(
+                pools['data'][item]['location']['longitude'],
+              ),
+            ),
           );
           fetchPool.add(pool);
         });
@@ -88,40 +107,29 @@ class _MypiscineScreen extends State<MypiscineScreen> {
       ),
       body: Center(
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               SizedBox(height: 20),
-              Image.asset("assets/logo.png", height: 150),
-              Text(
-                "Liste de mes piscines",
-                style: TextStyle(
-                  fontSize: screenWidth * 0.05,
-                  fontWeight: FontWeight.bold,
-                ),
+              Column(
+                children: [
+                  Image.asset("assets/logo.png", height: 150),
+                  Text(
+                    "Liste de vos piscines",
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.05,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: screenHeight * 0.5),
                 child: ListView.builder(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 50),
                   itemCount: piscines.length,
                   itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(
-                        piscines[index].name,
-                        style: TextStyle(color: Colors.white),
-                        textAlign: TextAlign.center,
-                      ),
-                      onTap: () {
-                        // Naviguer vers les détails de la piscine
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                DashboardScreen(pool: piscines[index]),
-                          ),
-                        );
-                      },
-                    );
+                    return _buildListPool(piscines[index]);
                   },
                 ),
               ),
@@ -157,6 +165,62 @@ class _MypiscineScreen extends State<MypiscineScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListPool(Pool pool) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    return Padding(
+      padding: EdgeInsets.all(6),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color.fromARGB(81, 255, 193, 7), // pas de fond
+          shadowColor: Colors.amber, // pas d’ombre
+          elevation: 0, // supprime l'élévation
+          padding: EdgeInsets.zero, // supprime le paddin
+          side: BorderSide(color: Colors.amber, width: 2),
+        ),
+        onPressed: () {
+          // Naviguer vers les détails de la piscine
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => DashboardScreen(pool: pool)),
+          );
+        },
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(50),
+                bottomLeft: Radius.circular(50),
+              ),
+              child: /* image.toString() != 'null' ? Image.file(
+                        image!,
+                        fit: BoxFit.cover,
+                        height: screenHeight * 0.08,
+                        width: screenWidth * 0.5,
+                      ) : */ Image.asset(
+                'assets/piscine.png',
+                fit: BoxFit.cover,
+                height: screenHeight * 0.08,
+                width: screenWidth * 0.3,
+              ),
+            ),
+            //Image.asset('assets/piscine.png', height: screenHeight * 0.08),
+            SizedBox(width: 20),
+            Text(
+              pool.name,
+              style: TextStyle(
+                color: Colors.amber,
+                fontSize: screenWidth * 0.04,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );

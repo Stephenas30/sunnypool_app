@@ -9,6 +9,7 @@ Future<Map<String, dynamic>> getWeather(double lat, double lon) async {
   final response = await http.get(url);
 
   if (response.statusCode == 200) {
+    print(response.body);
     return json.decode(response.body);
   } else {
     throw Exception('Erreur API météo');

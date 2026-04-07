@@ -311,7 +311,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                             ),
                             Row(
                               children: [
-                                Expanded(
+                                /* Expanded(
                                   child: Slider(
                                     value: volumePool ?? 0,
                                     min: 0,
@@ -326,10 +326,10 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                                       // });
                                     },
                                   ),
-                                ),
+                                ), */
 
                                 Text('${volumePool.toString()} m3'),
-                                SizedBox(width: 20),
+                                //SizedBox(width: 20),
                               ],
                             ),
                             Text(

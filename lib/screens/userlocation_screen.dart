@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sunnypool_app/models/pool_model.dart';
+import 'package:sunnypool_app/screens/add_piscine_screen.dart';
 import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
 import 'package:sunnypool_app/utils/user_location.dart';
 import 'package:geolocator/geolocator.dart';
@@ -177,7 +179,7 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                               Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => ConfigurationpiscineScreen(),
+                                builder: (_) => AddPiscineScreen(),
                               ),
                               );
                             } : null,

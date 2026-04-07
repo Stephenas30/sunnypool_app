@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/models/user_model.dart';
+import 'package:sunnypool_app/screens/dashboard_screen.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
@@ -11,9 +12,9 @@ import 'package:sunnypool_app/utils/user_location.dart';
 import 'package:sunnypool_app/widget/custom_stepper.dart';
 
 class AddPiscineScreen extends StatefulWidget {
-  final Function(Pool) onAddPool;
+  final Function(Pool)? onAddPool;
 
-  const AddPiscineScreen({Key? key, required this.onAddPool}) : super(key: key);
+  const AddPiscineScreen({Key? key, this.onAddPool}) : super(key: key);
 
   @override
   _AddPiscineScreen createState() {
@@ -84,54 +85,64 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   }
 
   void _submitPool() {
-/*     if (_formKey.currentState!.validate() &&
+    /*     if (_formKey.currentState!.validate() &&
         _formKey2.currentState!.validate()) { */
-      final newPool = Pool(
-        name: nameController.text,
-        type: typePool,
-        dimension: Dimension(
-          length: double.tryParse(lengthController.text) ?? 0,
-          width: double.tryParse(widthController.text) ?? 0,
-          depth: double.tryParse(depthController.text) ?? 0,
-        ),
-        traitements: traitementChecked,
-            /* .map((t) => Traitement(type: t, dateDernierTraitement: DateTime.now()))
+    final newPool = Pool(
+      name: nameController.text,
+      type: typePool,
+      dimension: Dimension(
+        length: double.tryParse(lengthController.text) ?? 0,
+        width: double.tryParse(widthController.text) ?? 0,
+        depth: double.tryParse(depthController.text) ?? 0,
+      ),
+      traitements: traitementChecked,
+      /* .map((t) => Traitement(type: t, dateDernierTraitement: DateTime.now()))
             .toList(), */
-        hydraulique: Hydraulique(
-          skimmers: int.tryParse(nbrSkimmersController.text) ?? 0,
-          refoulement: int.tryParse(nbrRefoulementController.text) ?? 0,
-          priseBalai: priseBalai,
-          bondeFond: bondeFond,
-        ),
-        filtration: Filtration(
-          pompe: pompe,
-          puissance: double.tryParse(puissancePompeController.text) ?? 0,
-          type: typeFiltre,
-        ),
-        photoPool: PhotoPool(
-          photoBassin: image_ensemble?.path ?? '',
-          photoEnvironnement: image_eau?.path ?? '',
-          photoLocalTechn: image_local?.path ?? '',
-        ),
-        location: Location(
-          latitude: location?.latitude ?? 0,
-          longitude: location?.longitude ?? 0,
-          adresse: adresseController.text,
-          codePostal: int.parse(codePostalController.text),
-          pays: paysController.text,
-          ville: villeController.text
-        ),
-      );
-      //print(newPool.getPool);
-      TokenStorage.getToken().then((token) => 
-      PoolService().addPool(token.toString(), newPool).then((value) => {
-        print(value),
-        widget.onAddPool(newPool),
-        Navigator.pop(context)
-      })
-      );
-      
-      
+      hydraulique: Hydraulique(
+        skimmers: int.tryParse(nbrSkimmersController.text) ?? 0,
+        refoulement: int.tryParse(nbrRefoulementController.text) ?? 0,
+        priseBalai: priseBalai,
+        bondeFond: bondeFond,
+      ),
+      filtration: Filtration(
+        pompe: pompe,
+        puissance: double.tryParse(puissancePompeController.text) ?? 0,
+        type: typeFiltre,
+      ),
+      photoPool: PhotoPool(
+        photoBassin: image_ensemble?.path ?? '',
+        photoEnvironnement: image_eau?.path ?? '',
+        photoLocalTechn: image_local?.path ?? '',
+      ),
+      location: Location(
+        latitude: location?.latitude ?? 0,
+        longitude: location?.longitude ?? 0,
+        adresse: adresseController.text,
+        codePostal: int.parse(codePostalController.text),
+        pays: paysController.text,
+        ville: villeController.text,
+      ),
+    );
+    //print(newPool.getPool);
+    TokenStorage.getToken().then(
+      (token) => PoolService()
+          .addPool(token.toString(), newPool)
+          .then(
+            (value) => {
+              print(value),
+
+              widget.onAddPool == null
+                  ? {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => DashboardScreen()),
+                      ),
+                    }
+                  : {widget.onAddPool!(newPool), Navigator.pop(context)},
+            },
+          ),
+    );
+
     // }
   }
 
@@ -998,7 +1009,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
               adresse: address['street'] ?? '',
               codePostal: int.parse(address['postalCode'] ?? '0'),
               ville: address['locality'] ?? '',
-              pays: address['country'] ?? ''
+              pays: address['country'] ?? '',
             );
           });
         }
