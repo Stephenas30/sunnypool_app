@@ -49,18 +49,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Map<String, dynamic> pools,
         ) {
           Pool pool = Pool(
-            name: pools['data'][0]['name'] ?? 'name',
+            id: pools['data'][0]['id'].toString(),
+            name: pools['data'][0]['titre'] ?? 'not name',
             type:
                 /* pools['data'][item]['caracteristiques']['type'] ?? */
                 TypePool.beton,
             dimension: Dimension(
-              length: parseDouble(pools['data'][0]['dimension']['length']),
-              width: parseDouble(pools['data'][0]['dimension']['width']),
-              depth: parseDouble(pools['data'][0]['dimension']['depth']),
+              length: parseDouble(pools['data'][0]['caracteristiques']['longueur']),
+              width: parseDouble(pools['data'][0]['caracteristiques']['largeur']),
+              depth: parseDouble(pools['data'][0]['caracteristiques']['profondeur']),
             ),
             location: Location(
-              latitude: parseDouble(pools['data'][0]['location']['latitude']),
-              longitude: parseDouble(pools['data'][0]['location']['longitude']),
+              latitude: parseDouble(pools['data'][0]['localisation']['latitude']),
+              longitude: parseDouble(pools['data'][0]['localisation']['longitude']),
             ),
           );
           setState(() {
@@ -115,12 +116,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double temperature = 29;
   List temps = ['Ensoleillé', 'Vent faible'];
 
-  void _addPool() {
-    setState(() {
-      pools.add("Nouvelle piscine #${pools.length + 1}");
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -128,13 +123,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.black, // couleur de la barre de notif
+        statusBarColor: const Color(0xFF050505), // couleur de la barre de notif
         statusBarIconBrightness: Brightness.light, // icônes visibles
       ),
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF050505),
         appBar: AppBar(
-          backgroundColor: Colors.black,
+          backgroundColor: const Color(0xFF090909),
           centerTitle: true,
           title: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -168,7 +163,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         drawer: Drawer(
-          backgroundColor: Colors.black,
+          backgroundColor: const Color(0xFF111111),
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
@@ -201,16 +196,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
         ),
-        body: loading
-            ? SkeletonLoading()
-            : SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    spacing: 16,
-                    children: [
+        body: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF050505), Color(0xFF111111)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: loading
+              ? SkeletonLoading()
+              : SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      spacing: 16,
+                      children: [
                       Container(
                         width: double.infinity,
                         //margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -350,8 +354,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       Container(
                         decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 70, 73, 74),
-                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.amber.withOpacity(0.15)),
                         ),
                         padding: EdgeInsets.all(16),
                         // margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -454,8 +459,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 70, 73, 74),
-                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.amber.withOpacity(0.15)),
                         ),
                         height: 350,
                         width: double.infinity,
@@ -567,10 +573,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     },
                   ), */
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
+        ),
       ),
     );
   }
@@ -578,7 +585,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildMenuItem(IconData icon, String title, [Widget? destination]) {
     return ListTile(
       leading: Icon(icon, color: Colors.amber),
-      title: Text(title, style: TextStyle(color: Colors.white)),
+      title: Text(title, style: TextStyle(color: Colors.white.withOpacity(0.9))),
       onTap: () {
         /* Navigator.pop(context);
         ScaffoldMessenger.of(
@@ -605,15 +612,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Widget? destination,
   ]) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return Expanded(
       child: Container(
         // padding: EdgeInsets.all(16),
         // margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 70, 73, 74),
-          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.amber.withOpacity(0.15)),
         ),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(

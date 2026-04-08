@@ -55,102 +55,76 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Historique des analyses',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Historique des analyses'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
         centerTitle: true,
       ),
-      body: Center(
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
         child: Padding(
-          padding: EdgeInsetsGeometry.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _buildChart(),
-              Column(
-                spacing: 8,
-                children: [
-                  Text(
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
                     'Historique des analyses',
-                    style: TextStyle(fontSize: screenWidth * 0.05),
+                    style: theme.textTheme.titleLarge?.copyWith(color: Colors.amber),
                   ),
-                  ...List.generate(
-                    phEvolution.length,
-                    (index) => Container(
-                      margin: EdgeInsets.symmetric(vertical: 2, horizontal: 20),
-                      padding: EdgeInsets.all(16),
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.all(Radius.circular(20)),
-                        border: Border.all(color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: phEvolution.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) => Card(
+                    child: ListTile(
+                      title: Text(
+                        'Analyse ${formatter.format(phEvolution[index].date)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Analyse ${phEvolution[index].date.toString()}',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                  ),
-                                  Text(
-                                    'ph ${phEvolution[index].value} . chlore ${chloreEvolution[index].value} . TAC ${tacEvolution[index].value}',
-                                  ),
-                                ],
-                              ),
-                              Icon(
-                                Icons.search,
-                                size: screenWidth * 0.05,
-                                color: Colors.white,
-                              ),
-                            ],
-                          ),
-                        ],
+                      subtitle: Text(
+                        'pH ${phEvolution[index].value} • Chlore ${chloreEvolution[index].value} • TAC ${tacEvolution[index].value}',
+                        style: const TextStyle(color: Colors.white70),
                       ),
+                      trailing: const Icon(Icons.search, color: Colors.amber),
+                      onTap: () {},
                     ),
                   ),
-                  ElevatedButton(
-                    onPressed: () {},
-                    child: Text(
-                      'Nouvelle analyse',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: screenWidth * 0.03,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.1,
-                        vertical: screenHeight * 0.01,
-                      ),
-                    ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {},
+                  child: Text(
+                    'Nouvelle analyse',
+                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -160,25 +134,28 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
   }
 
   Widget _buildChart() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     return Container(
-      margin: EdgeInsets.all(8),
-      padding: EdgeInsets.only(top: 16, right: 20, bottom: 8),
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.only(top: 16, right: 20, bottom: 8, left: 10),
       decoration: BoxDecoration(
-        color: Colors.amber,
-        borderRadius: BorderRadius.all(Radius.circular(20)),
+        color: const Color(0xFF151515),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
+        border: Border.all(color: Colors.amber.withOpacity(0.25)),
       ),
       child: Column(
         spacing: 12,
         children: [
-          Text('Evolution de la qualité de l\'eau', style: TextStyle(fontSize: screenWidth * 0.05),),
+          const Text(
+            'Évolution de la qualité de l\'eau',
+            style: TextStyle(fontSize: 18, color: Colors.amber, fontWeight: FontWeight.bold),
+          ),
           SizedBox(
             width: double.infinity,
             height: 250,
             child: LineChart(
               LineChartData(
                 gridData: FlGridData(show: true),
+                backgroundColor: Colors.transparent,
                 titlesData: FlTitlesData(
                   topTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
@@ -200,7 +177,7 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                         final date = phEvolution[index].date;
                         final day = date.day.toString().padLeft(2, '0');
                         final month = date.month.toString().padLeft(2, '0');
-                        return Text('$day $month');
+                        return Text('$day/$month', style: const TextStyle(color: Colors.white70, fontSize: 11));
                       },
                     ),
                   ),
@@ -230,6 +207,7 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                     ),
                     barWidth: 4,
                     dotData: FlDotData(show: true),
+                    color: Colors.amber,
                   ),
                   LineChartBarData(
                     isCurved: true,
@@ -264,7 +242,7 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                     ),
                     barWidth: 4,
                     dotData: FlDotData(show: true),
-                    color: Colors.red,
+                    color: Colors.deepOrangeAccent,
                   ),
                 ],
               ),

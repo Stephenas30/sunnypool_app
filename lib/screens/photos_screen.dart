@@ -46,19 +46,16 @@ class _PhotosScreenState extends State<PhotosScreen> {
   
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Photos Piscine',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Photos Piscine'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -79,13 +76,22 @@ class _PhotosScreenState extends State<PhotosScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsetsGeometry.symmetric(horizontal: 12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsetsGeometry.symmetric(horizontal: 12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
               Column(
                 children: [
                   Image.asset('assets/logo.png', width: screenWidth * 0.3),
@@ -93,7 +99,7 @@ class _PhotosScreenState extends State<PhotosScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
                       'Ajoutez des photos  de votre piscine pour une analyse précise.',
-                      style: TextStyle(fontSize: screenWidth * 0.03),
+                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -116,8 +122,9 @@ class _PhotosScreenState extends State<PhotosScreen> {
             ),
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white),
-                  borderRadius: BorderRadius.all(Radius.circular(20))
+                  color: const Color(0xFF1A1A1A),
+                  border: Border.all(color: Colors.amber.withOpacity(0.25)),
+                  borderRadius: BorderRadius.all(Radius.circular(20)),
                 ),
                 padding: EdgeInsets.symmetric(vertical: 8),
                 margin: EdgeInsets.symmetric(horizontal: 20),
@@ -127,7 +134,9 @@ class _PhotosScreenState extends State<PhotosScreen> {
                   children: [
                     Text('Conseil', textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: screenWidth * 0.05
+                        fontSize: screenWidth * 0.05,
+                        color: Colors.amber,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     Row(
@@ -137,7 +146,8 @@ class _PhotosScreenState extends State<PhotosScreen> {
                         Text(
                           'Prenez des photos nettes et lumineuses',
                           style: TextStyle(
-                            fontSize: screenWidth * 0.03
+                            fontSize: screenWidth * 0.03,
+                            color: Colors.white70,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -150,7 +160,8 @@ class _PhotosScreenState extends State<PhotosScreen> {
                         Text(
                           'Montrez la pompe, le skimmer, le robot',
                           style: TextStyle(
-                            fontSize: screenWidth * 0.03
+                            fontSize: screenWidth * 0.03,
+                            color: Colors.white70,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -163,7 +174,8 @@ class _PhotosScreenState extends State<PhotosScreen> {
                         Text(
                           'L\'IA analusera votre piscine automatiquement',
                           style: TextStyle(
-                            fontSize: screenWidth * 0.03
+                            fontSize: screenWidth * 0.03,
+                            color: Colors.white70,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -182,39 +194,26 @@ class _PhotosScreenState extends State<PhotosScreen> {
                 },
                 child: Text(
                   'Confirmer et continuer',
-                  style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.03),
+                  style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.1,
-                    vertical: screenHeight * 0.01,
+              ),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white38),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: Text(
+                    'Passer cette étape',
+                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
                   ),
                 ),
               ),
-              ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(
-                            255,
-                            99,
-                            99,
-                            99,
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.1,
-                            vertical: screenHeight * 0.01,
-                          ),
-                        ),
-                        child: Text(
-                          'Passer cette étape',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.03,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -234,11 +233,11 @@ class _PhotosScreenState extends State<PhotosScreen> {
         borderRadius: BorderRadius.all(Radius.circular(20)),
       ), */
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFF151515),
         padding: EdgeInsets.all(0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.amber),
+          side: BorderSide(color: Colors.amber.withOpacity(0.4)),
         ),
       ),
       onPressed: () {

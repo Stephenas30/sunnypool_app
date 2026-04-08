@@ -3,7 +3,7 @@ import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
 import 'package:sunnypool_app/utils/user_location.dart';
 
 class PiscinelocationScreen  extends StatefulWidget {
-  const PiscinelocationScreen({Key? key}) : super(key: key);
+  const PiscinelocationScreen({super.key});
 
   @override
   State<StatefulWidget> createState() {
@@ -62,14 +62,24 @@ class _PiscinelocationScreen extends State<PiscinelocationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(10),
-          child: ConstrainedBox(
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(10),
+            child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: screenHeight),
             child: IntrinsicHeight(
               child: Column(
@@ -81,9 +91,10 @@ class _PiscinelocationScreen extends State<PiscinelocationScreen> {
                       Image.asset('assets/icon.png', height: screenHeight / 4),
                       Text(
                         'Votre Localisation',
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.08,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: Colors.amber,
                           fontWeight: FontWeight.bold,
+                          fontSize: screenWidth * 0.08,
                         ),
                       ),
                     ],
@@ -180,18 +191,18 @@ class _PiscinelocationScreen extends State<PiscinelocationScreen> {
                               ),
                               );
                             } : null,
-                            child: Text(
-                              'Continuer',
-                              style: TextStyle(
-                              fontSize: screenWidth * 0.03,
-                              color: Colors.white,
-                              ),
-                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: locationChecked ? Colors.amber : Colors.grey,
                               padding: EdgeInsets.symmetric(
                               horizontal: screenWidth * 0.2,
                               vertical: screenHeight * 0.01,
+                              ),
+                            ),
+                            child: Text(
+                              'Continuer',
+                              style: TextStyle(
+                              fontSize: screenWidth * 0.03,
+                              color: Colors.white,
                               ),
                             ),
                             ),
@@ -200,17 +211,11 @@ class _PiscinelocationScreen extends State<PiscinelocationScreen> {
                             children: [
                               Text(
                                 'En continuant, vous acceptez nos',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.03,
-                                  color: Colors.white,
-                                ),
+                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                               ),
                               Text(
                                 'Conditions générales d\'utilisation',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.03,
-                                  color: Colors.white,
-                                ),
+                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                               ),
                             ],
                           ),
@@ -225,6 +230,7 @@ class _PiscinelocationScreen extends State<PiscinelocationScreen> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -235,8 +241,6 @@ class _PiscinelocationScreen extends State<PiscinelocationScreen> {
     bool obscure = false,
     String? Function(String?)? validator,
   }) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 60, vertical: 8),
       child: TextFormField(

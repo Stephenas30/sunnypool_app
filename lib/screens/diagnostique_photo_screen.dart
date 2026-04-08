@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'profile_screen.dart';
 
 class DiagnostiquePhotoScreen extends StatefulWidget {
-  const DiagnostiquePhotoScreen({Key? key}) : super(key: key);
+  const DiagnostiquePhotoScreen({super.key});
 
   @override
   State<DiagnostiquePhotoScreen> createState() => _DiagnostiquePhotoScreenState();
@@ -19,18 +19,15 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Diagnostic photo',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Diagnostic photo'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -51,13 +48,19 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 20,
-          horizontal: screenWidth * 0.01,
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
-        child: Center(
-          child: Column(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.04),
+          child: Center(
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             spacing: 20,
@@ -67,7 +70,7 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
                   Image.asset('assets/logo.png', height: screenHeight / 6),
                   Text(
                     'Analyse intelligente des photos en cours.',
-                    style: TextStyle(fontSize: screenWidth * 0.03),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                     textAlign: TextAlign.center,
                     softWrap: true,
                   ),
@@ -82,43 +85,37 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
               ),
               Column(
                 children: [
-                   ElevatedButton(
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
                 onPressed: () {},
                 child: Text(
                   'Continuer',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: screenWidth * 0.03,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.1,
-                    vertical: screenHeight * 0.01,
-                  ),
+                  style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
                 ),
               ),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 99, 99, 99),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.1,
-                    vertical: screenHeight * 0.01,
                   ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.white38),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 child: Text(
                   'Passer',
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.03,
-                    color: Colors.white,
-                  ),
+                  style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
                 ),
               ),
+                  ),
                 ],
               )
             ],
+            ),
           ),
         ),
       ),
@@ -127,13 +124,12 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
 
   Widget _buildListTutoriels(String title) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     return Container(
       margin: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: Colors.amber
-        )
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.withOpacity(0.25)),
       ),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
@@ -147,8 +143,10 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
         },
         child: Row(
           children: [
-           Icon(Icons.check, color: Colors.amber,),
-   Text(
+            const SizedBox(width: 8),
+            Icon(Icons.check_circle_outline, color: Colors.amber,),
+            const SizedBox(width: 10),
+            Expanded(child: Text(
                 title,
                 style: TextStyle(
                   color: Colors.white,
@@ -156,7 +154,7 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
-              ),
+              )),
           ],
         ),
       ),

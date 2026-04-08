@@ -14,7 +14,7 @@ import 'package:sunnypool_app/widget/custom_stepper.dart';
 class AddPiscineScreen extends StatefulWidget {
   final Function(Pool)? onAddPool;
 
-  const AddPiscineScreen({Key? key, this.onAddPool}) : super(key: key);
+  const AddPiscineScreen({super.key, this.onAddPool});
 
   @override
   _AddPiscineScreen createState() {
@@ -28,6 +28,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   final ImagePicker _picker = ImagePicker();
 
   int _currentStep = 0;
+  bool _isSubmitting = false;
 
   final nameController = TextEditingController();
   final lengthController = TextEditingController();
@@ -84,7 +85,14 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     }
   }
 
-  void _submitPool() {
+  Future<void> _submitPool() async {
+    if (!_validateCurrentStep(showError: true)) return;
+    if (_isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
     /*     if (_formKey.currentState!.validate() &&
         _formKey2.currentState!.validate()) { */
     final newPool = Pool(
@@ -118,35 +126,102 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
         latitude: location?.latitude ?? 0,
         longitude: location?.longitude ?? 0,
         adresse: adresseController.text,
-        codePostal: int.parse(codePostalController.text),
+        codePostal: int.tryParse(codePostalController.text) ?? 0,
         pays: paysController.text,
         ville: villeController.text,
       ),
     );
-    //print(newPool.getPool);
-    TokenStorage.getToken().then(
-      (token) => PoolService()
-          .addPool(token.toString(), newPool)
-          .then(
-            (value) => {
-              print(value),
+    try {
+      final token = await TokenStorage.getToken();
+      await PoolService().addPool(token.toString(), newPool);
 
-              widget.onAddPool == null
-                  ? {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => DashboardScreen()),
-                      ),
-                    }
-                  : {widget.onAddPool!(newPool), Navigator.pop(context)},
-            },
-          ),
-    );
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Piscine ajoutée avec succès.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      if (widget.onAddPool == null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => DashboardScreen()),
+        );
+      } else {
+        widget.onAddPool!(newPool);
+        Navigator.pop(context);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Échec de l\'ajout. Veuillez réessayer.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
 
     // }
   }
 
+  void _showStepError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+    );
+  }
+
+  bool _validateCurrentStep({bool showError = false}) {
+    if (_currentStep == 0) {
+      final length = double.tryParse(lengthController.text) ?? 0;
+      final width = double.tryParse(widthController.text) ?? 0;
+      final depth = double.tryParse(depthController.text) ?? 0;
+
+      if (nameController.text.trim().isEmpty) {
+        if (showError) _showStepError('Renseignez le nom de la piscine.');
+        return false;
+      }
+      if (length <= 0 || width <= 0 || depth <= 0) {
+        if (showError) {
+          _showStepError('Renseignez des dimensions valides (longueur, largeur, profondeur).');
+        }
+        return false;
+      }
+    }
+
+    if (_currentStep == 1 && traitementChecked.isEmpty) {
+      if (showError) _showStepError('Sélectionnez au moins un traitement.');
+      return false;
+    }
+
+    if (_currentStep == 3) {
+      final hasAddress =
+          adresseController.text.trim().isNotEmpty &&
+          codePostalController.text.trim().isNotEmpty &&
+          villeController.text.trim().isNotEmpty &&
+          paysController.text.trim().isNotEmpty;
+      final validPostal = int.tryParse(codePostalController.text.trim()) != null;
+
+      if (!hasAddress || !validPostal) {
+        if (showError) {
+          _showStepError('Complétez la localisation avec un code postal valide.');
+        }
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   void _nextStep() {
+    if (!_validateCurrentStep(showError: true)) return;
     if (_currentStep < 3) {
       setState(() => _currentStep++);
     }
@@ -160,18 +235,14 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final theme = Theme.of(context);
     final screenHeight = MediaQuery.of(context).size.height;
     // TODO: implement build
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Ajouter une piscine',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Ajouter une piscine'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -192,15 +263,24 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
           ),
         ],
       ),
-      body: Column(
-        spacing: 20,
-        children: [
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Column(
+          spacing: 20,
+          children: [
           Column(
             children: [
               Image.asset('assets/logo.png', height: screenHeight / 12),
               Text(
                 'Ajouter votre piscine.',
-                style: TextStyle(fontSize: screenWidth * 0.05),
+                style: theme.textTheme.titleLarge?.copyWith(color: Colors.amber),
                 textAlign: TextAlign.center,
                 softWrap: true,
               ),
@@ -216,13 +296,13 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
 
   Widget _buildFormPool() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     void onChangedVolume() {
       final length = double.tryParse(lengthController.text) ?? 0;
@@ -280,7 +360,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                 // Text('Type piscine'),
                 // SizedBox(height: 10),
                 DropdownButtonFormField<TypePool>(
-                  value: typePool,
+                  initialValue: typePool,
                   style: TextStyle(color: Colors.white),
                   dropdownColor: const Color.fromARGB(128, 255, 214, 64),
                   decoration: InputDecoration(
@@ -430,7 +510,6 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
 
   Widget _buildFormTraitement() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     return SingleChildScrollView(
       child: /* Padding(
           //padding: EdgeInsets.all(8),
@@ -536,7 +615,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                             /* Expanded(
                               child:  */
                             DropdownButtonFormField<bool>(
-                              value: false,
+                              initialValue: false,
                               style: TextStyle(color: Colors.white),
                               dropdownColor: const Color.fromARGB(
                                 128,
@@ -586,7 +665,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                             /* Expanded(
                               child:  */
                             DropdownButtonFormField<BondeFond>(
-                              value: BondeFond.non,
+                              initialValue: BondeFond.non,
                               style: TextStyle(color: Colors.white),
                               dropdownColor: const Color.fromARGB(
                                 128,
@@ -657,7 +736,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                           children: [
                             Expanded(
                               child: DropdownButtonFormField<Pompe>(
-                                value: Pompe.standard,
+                                initialValue: Pompe.standard,
                                 style: TextStyle(color: Colors.white),
                                 dropdownColor: const Color.fromARGB(
                                   128,
@@ -742,7 +821,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                             ),
                             Expanded(
                               child: DropdownButtonFormField<TypeFiltre>(
-                                value: TypeFiltre.sable,
+                                initialValue: TypeFiltre.sable,
                                 style: TextStyle(color: Colors.white),
                                 dropdownColor: const Color.fromARGB(
                                   128,
@@ -803,7 +882,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                         decoration: TextDecoration.overline,
                       ),
                     ),
-                    Container(
+                    SizedBox(
                       width: screenWidth,
                       child: Flex(
                         direction: Axis.horizontal,
@@ -814,7 +893,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                               (item) => Expanded(
                                 child: ElevatedButton(
                                   style: ButtonStyle(
-                                    backgroundColor: MaterialStateProperty.all(
+                                    backgroundColor: WidgetStateProperty.all(
                                       traitementChecked.contains(item)
                                           ? Colors.amber
                                           : Colors.transparent,
@@ -987,7 +1066,6 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
 
   Widget _buildFormLocation() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     bool isLoadingLocation = false;
     bool locationChecked = false;
@@ -1038,15 +1116,13 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
       }
     }
 
-    Widget _buildTextField(
+    Widget buildTextField(
       IconData icon,
       String title,
       TextEditingController? controller, {
       bool obscure = false,
       String? Function(String?)? validator,
     }) {
-      final screenWidth = MediaQuery.of(context).size.width;
-      final screenHeight = MediaQuery.of(context).size.height;
       return /* Padding(
       padding: EdgeInsets.symmetric(horizontal: 60, vertical: 8),
       child: */ TextFormField(
@@ -1082,10 +1158,10 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         spacing: 20,
         children: [
-          _buildTextField(Icons.home, 'Adresse', adresseController),
-          _buildTextField(Icons.post_add, 'Code postal', codePostalController),
-          _buildTextField(Icons.location_city, 'Ville', villeController),
-          _buildTextField(Icons.public, 'Pays', paysController),
+          buildTextField(Icons.home, 'Adresse', adresseController),
+          buildTextField(Icons.post_add, 'Code postal', codePostalController),
+          buildTextField(Icons.location_city, 'Ville', villeController),
+          buildTextField(Icons.public, 'Pays', paysController),
           /* Padding(
               // padding: EdgeInsets.symmetric(horizontal: 60, vertical: 8),
               child: */
@@ -1142,20 +1218,39 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   }
 
   Widget _buildStepper() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
     final List<String> steps = ["Piscine", "Traitements", "Photos", "Ajouter"];
 
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Étape ${_currentStep + 1} / ${steps.length} • ${steps[_currentStep]}',
+              style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: (_currentStep + 1) / steps.length,
+            minHeight: 6,
+            borderRadius: BorderRadius.circular(10),
+            backgroundColor: Colors.white12,
+            color: Colors.amber,
+          ),
+          const SizedBox(height: 16),
           CustomStepper(
             currentStep: _currentStep,
             steps: steps,
             onStepTapped: (index) {
-              setState(() => _currentStep = index);
+              if (index <= _currentStep) {
+                setState(() => _currentStep = index);
+                return;
+              }
+              if (_validateCurrentStep(showError: true)) {
+                setState(() => _currentStep = index);
+              }
             },
           ),
 
@@ -1179,10 +1274,6 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
               _currentStep > 0
                   ? ElevatedButton(
                       onPressed: _prevStep,
-                      child: Text(
-                        "Retour",
-                        style: TextStyle(color: Colors.white),
-                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         /* padding:
@@ -1191,16 +1282,16 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                           borderRadius: BorderRadius.all(Radius.circular(5)),
                         ),
                         side: BorderSide(color: Colors.amber, width: 1),
+                      ),
+                      child: Text(
+                        "Retour",
+                        style: TextStyle(color: Colors.white),
                       ),
                     )
                   : SizedBox.shrink(),
               _currentStep < steps.length - 1
                   ? ElevatedButton(
                       onPressed: _nextStep,
-                      child: Text(
-                        "Suivant",
-                        style: TextStyle(color: Colors.white),
-                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         /* padding:
@@ -1210,13 +1301,13 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                         ),
                         side: BorderSide(color: Colors.amber, width: 1),
                       ),
-                    )
-                  : ElevatedButton(
-                      onPressed: _submitPool,
                       child: Text(
-                        "Ajouter",
+                        "Suivant",
                         style: TextStyle(color: Colors.white),
                       ),
+                    )
+                  : ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submitPool,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber,
                         /* padding:
@@ -1226,6 +1317,19 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                         ),
                         side: BorderSide(color: Colors.amber, width: 1),
                       ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.black,
+                              ),
+                            )
+                          : const Text(
+                              "Ajouter",
+                              style: TextStyle(color: Colors.white),
+                            ),
                     ),
             ],
           ),

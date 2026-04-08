@@ -7,10 +7,10 @@ class ConfigurationpiscineScreen extends StatefulWidget {
   final List<String> traitementChecked;
 
   const ConfigurationpiscineScreen({
-    Key? key,
+    super.key,
     this.pool,
     this.traitementChecked = const ['Chlore'],
-  }) : super(key: key);
+  });
 
   @override
   _ConfigurationpiscineScreen createState() {
@@ -56,12 +56,21 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: nameController.text.isEmpty
-              ? EdgeInsets.all(10)
-              : EdgeInsets.zero,
-          child: ConstrainedBox(
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: nameController.text.isEmpty
+                ? EdgeInsets.all(10)
+                : EdgeInsets.zero,
+            child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: nameController.text.isEmpty ? MediaQuery.of(context).size.height : 0,
             ),
@@ -146,7 +155,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                             // Text('Type piscine'),
                             // SizedBox(height: 10),
                             DropdownButtonFormField<TypePool>(
-                              value: typePool,
+                              initialValue: typePool,
                               style: TextStyle(color: Colors.white),
                               dropdownColor: const Color.fromARGB(
                                 128,
@@ -339,7 +348,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                                 decoration: TextDecoration.overline,
                               ),
                             ),
-                            Container(
+                            SizedBox(
                               width: screenWidth,
                               child: Flex(
                                 direction: Axis.horizontal,
@@ -352,7 +361,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
                                         child: ElevatedButton(
                                           style: ButtonStyle(
                                             backgroundColor:
-                                                MaterialStateProperty.all(
+                                                WidgetStateProperty.all(
                                                   traitementChecked.contains(
                                                         item,
                                                       )
@@ -490,6 +499,7 @@ class _ConfigurationpiscineScreen extends State<ConfigurationpiscineScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

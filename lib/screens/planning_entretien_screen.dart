@@ -19,18 +19,15 @@ const listPlanning = [
 class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Planning d\'entretien',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Planning d\'entretien'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -51,13 +48,19 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 20,
-          horizontal: screenWidth * 0.01,
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
-        child: Center(
-          child: Column(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.04),
+          child: Center(
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             spacing: 20,
@@ -67,7 +70,7 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
                   Image.asset('assets/logo.png', height: screenHeight / 6),
                   Text(
                     'Taches hebdomadaires recommandées pour l\'entretien de votre piscine.',
-                    style: TextStyle(fontSize: screenWidth * 0.03),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                     textAlign: TextAlign.center,
                     softWrap: true,
                   ),
@@ -82,43 +85,37 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
               ),
               Column(
                 children: [
-                  ElevatedButton(
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton(
                     onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 99, 99, 99),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.1,
-                        vertical: screenHeight * 0.01,
-                      ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white38),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: Text(
                       'Ajouter une tâche',
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.03,
-                        color: Colors.white,
-                      ),
+                      style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
                     ),
                   ),
-                  ElevatedButton(
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
                     onPressed: () {},
                     child: Text(
                       'Tâches terminées',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: screenWidth * 0.03,
-                      ),
+                      style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.1,
-                        vertical: screenHeight * 0.01,
-                      ),
-                    ),
+                  ),
                   ),
                 ],
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -127,12 +124,12 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
 
   Widget _buildListPlanning(String title) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     return Container(
       margin: EdgeInsets.symmetric(vertical: 8, horizontal: 20),
       padding: EdgeInsets.symmetric(vertical: 8, horizontal: 20),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.amber),
+        color: const Color(0xFF1A1A1A),
+        border: Border.all(color: Colors.amber.withOpacity(0.25)),
         borderRadius: BorderRadius.all(Radius.circular(20))
         ),
       child: ElevatedButton(

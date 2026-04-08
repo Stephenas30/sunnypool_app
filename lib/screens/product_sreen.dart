@@ -36,22 +36,17 @@ List<Map<String, dynamic>> listProduct = [
 ];
 
 class _ProductScreenState extends State<ProductScreen> {
-  late List<bool> buttonSelected = [true, false];
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Mes produits',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Mes produits'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -72,81 +67,75 @@ class _ProductScreenState extends State<ProductScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 20,
-          horizontal: screenWidth * 0.08,
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
-        child: Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.08),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            spacing: 20,
             children: [
-              Column(
-                children: [
-                  Image.asset('assets/logo.png', height: screenHeight / 6),
-                  Text(
-                    'Sélectionnez vos produits d\'entretien piscine pour que Sunny vous donne des recommandations précises et optimisées.',
-                    style: TextStyle(fontSize: screenWidth * 0.03),
-                    textAlign: TextAlign.center,
-                    softWrap: true,
-                  ),
-                ],
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF121212),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                ),
+                child: Column(
+                  children: [
+                    Image.asset('assets/logo.png', height: screenHeight / 7),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Sélectionnez vos produits d\'entretien piscine pour que Sunny vous donne des recommandations précises et optimisées.',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: screenHeight * 0.4),
-                child: SingleChildScrollView(
-                  child: ListView(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    children: listProduct
-                        .map((item) => _buildListProduct(item))
-                        .toList(),
+              const SizedBox(height: 14),
+              Expanded(
+                child: ListView(
+                  children: listProduct.map((item) => _buildListProduct(item)).toList(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {
+                    print('Continuer');
+                    print(listProduct);
+                  },
+                  child: Text(
+                    'Continuer',
+                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
                   ),
                 ),
               ),
-              Column(
-                spacing: 8,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      print('Continuer');
-                      print(listProduct);
-                    },
-                    child: Text(
-                      'Continuer',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: screenWidth * 0.03,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.1,
-                        vertical: screenHeight * 0.01,
-                      ),
-                    ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white38),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 99, 99, 99),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.1,
-                        vertical: screenHeight * 0.01,
-                      ),
-                    ),
-                    child: Text(
-                      'Passer',
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.03,
-                        color: Colors.white,
-                      ),
-                    ),
+                  child: Text(
+                    'Passer',
+                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -157,13 +146,13 @@ class _ProductScreenState extends State<ProductScreen> {
 
   Widget _buildListProduct(Map<String, dynamic> product) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
       padding: EdgeInsets.all(12),
       margin: EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.amber),
+        color: const Color(0xFF1A1A1A),
+        border: Border.all(color: Colors.amber.withOpacity(0.25)),
         borderRadius: BorderRadius.all(Radius.circular(20)),
       ),
       child: Row(

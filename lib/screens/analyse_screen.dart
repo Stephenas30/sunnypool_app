@@ -17,18 +17,14 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Analyse de l\'eau',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Analyse de l\'eau'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -49,99 +45,73 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.08),
-        child: Center(
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.08),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            spacing: 20,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: buttonSelected[0]
-                            ? Colors.amber
-                            : Colors.black,
-                        foregroundColor: buttonSelected[0]
-                            ? Colors.black
-                            : Colors.amber,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 15,
-                        ),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(0),
-                            bottomRight: Radius.circular(0),
-                            topLeft: Radius.circular(20),
-                            bottomLeft: Radius.circular(20),
-                          ),
-                        ),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          buttonSelected[0] = true;
-                          buttonSelected[1] = false;
-                        });
-                      },
-                      child: Text("Saisir les valeurs", style: TextStyle(fontSize: screenWidth * 0.035), textAlign: TextAlign.end,),
-                    ),
-                  ),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: buttonSelected[1]
-                            ? Colors.amber
-                            : Colors.black,
-                        foregroundColor: buttonSelected[1]
-                            ? Colors.black
-                            : Colors.amber,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 15,
-                        ),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(20),
-                            bottomRight: Radius.circular(20),
-                            topLeft: Radius.circular(0),
-                            bottomLeft: Radius.circular(0),
-                          ),
-                        ),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          buttonSelected[0] = false;
-                          buttonSelected[1] = true;
-                        });
-                      },
-                      child: Text("Photo bandelette", style: TextStyle(fontSize: screenWidth * 0.035)),
-                    ),
-                  ),
-                ],
-              ),
-              ListView(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                
-                children: listAnalyse
-                    .map((item) => _buildListAnalyse(item))
-                    .toList(),
-              ),
-              ElevatedButton(
-                onPressed: () {},
-                child: Text(
-                  'Analyser',
-                  style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.03),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF151515),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.amber.withOpacity(0.25)),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.1,
-                    vertical: screenHeight * 0.01,
+                padding: const EdgeInsets.all(6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildModeButton(
+                        label: 'Saisir les valeurs',
+                        selected: buttonSelected[0],
+                        onPressed: () {
+                          setState(() {
+                            buttonSelected[0] = true;
+                            buttonSelected[1] = false;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildModeButton(
+                        label: 'Photo bandelette',
+                        selected: buttonSelected[1],
+                        onPressed: () {
+                          setState(() {
+                            buttonSelected[0] = false;
+                            buttonSelected[1] = true;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: listAnalyse.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) => _buildListAnalyse(listAnalyse[index]),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {},
+                  child: Text(
+                    'Analyser',
+                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
                   ),
                 ),
               ),
@@ -152,34 +122,52 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
     );
   }
 
+  Widget _buildModeButton({
+    required String label,
+    required bool selected,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        elevation: 0,
+        backgroundColor: selected ? Colors.amber : Colors.transparent,
+        foregroundColor: selected ? Colors.black : Colors.amber,
+        side: BorderSide(color: selected ? Colors.amber : Colors.amber.withOpacity(0.4)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      onPressed: onPressed,
+      child: Text(label, textAlign: TextAlign.center),
+    );
+  }
+
   Widget _buildListAnalyse(String title) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-  return ElevatedButton(
-    style: ButtonStyle(
-      backgroundColor: MaterialStateProperty.all(
-        analyseChecked.contains(title) ? Colors.amber : Colors.transparent,
+    final selected = analyseChecked == title;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        onTap: () {
+          setState(() {
+            analyseChecked = title;
+          });
+        },
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        leading: Icon(
+          selected ? Icons.check_circle : Icons.water_drop_outlined,
+          color: selected ? Colors.amber : Colors.white70,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: selected ? Colors.amber : Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: selected ? Colors.amber : Colors.white54,
+        ),
       ),
-      foregroundColor: WidgetStateProperty.all(Colors.white),
-    ),
-    onPressed: () {
-      setState(() {
-        if (!analyseChecked.contains(title)) {
-          analyseChecked = title;
-        } else {
-          analyseChecked = title;
-        }
-      });
-    },
-    child: Text(
-      title,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: screenWidth * 0.05,
-        fontWeight: FontWeight.bold,
-      ),
-      textAlign: TextAlign.center,
-    ),
-  );
-}
+    );
+  }
 }

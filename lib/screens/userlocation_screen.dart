@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/screens/add_piscine_screen.dart';
-import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
 import 'package:sunnypool_app/utils/user_location.dart';
-import 'package:geolocator/geolocator.dart';
 
 class UserlocationScreen extends StatefulWidget {
-  const UserlocationScreen({Key? key}) : super(key: key);
+  const UserlocationScreen({super.key});
 
   @override
   State<StatefulWidget> createState() {
@@ -65,14 +62,24 @@ class _UserlocationScreen extends State<UserlocationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(10),
-          child: ConstrainedBox(
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(10),
+            child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: screenHeight),
             child: IntrinsicHeight(
               child: Column(
@@ -84,9 +91,10 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                       Image.asset('assets/icon.png', height: screenHeight / 4),
                       Text(
                         'Votre Localisation',
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.08,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: Colors.amber,
                           fontWeight: FontWeight.bold,
+                          fontSize: screenWidth * 0.08,
                         ),
                       ),
                     ],
@@ -183,18 +191,18 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                               ),
                               );
                             } : null,
-                            child: Text(
-                              'Continuer',
-                              style: TextStyle(
-                              fontSize: screenWidth * 0.03,
-                              color: Colors.white,
-                              ),
-                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: locationChecked ? Colors.amber : Colors.grey,
                               padding: EdgeInsets.symmetric(
                               horizontal: screenWidth * 0.2,
                               vertical: screenHeight * 0.01,
+                              ),
+                            ),
+                            child: Text(
+                              'Continuer',
+                              style: TextStyle(
+                              fontSize: screenWidth * 0.03,
+                              color: Colors.white,
                               ),
                             ),
                             ),
@@ -203,17 +211,11 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                             children: [
                               Text(
                                 'En continuant, vous acceptez nos',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.03,
-                                  color: Colors.white,
-                                ),
+                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                               ),
                               Text(
                                 'Conditions générales d\'utilisation',
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.03,
-                                  color: Colors.white,
-                                ),
+                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                               ),
                             ],
                           ),
@@ -228,6 +230,7 @@ class _UserlocationScreen extends State<UserlocationScreen> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -238,8 +241,6 @@ class _UserlocationScreen extends State<UserlocationScreen> {
     bool obscure = false,
     String? Function(String?)? validator,
   }) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 60, vertical: 8),
       child: TextFormField(
