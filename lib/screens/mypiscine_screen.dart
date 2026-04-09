@@ -48,6 +48,8 @@ class _MypiscineScreen extends State<MypiscineScreen> {
         return;
       }
 
+      print('Token récupéré : $tokenValue'); // Debug: Affiche le token
+
       final pools = await PoolService().getAllPool(tokenValue.toString());
       final fetchPool = <Pool>[];
 
