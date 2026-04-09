@@ -1,3 +1,22 @@
+class Location {
+  final double latitude;
+  final double longitude;
+  final String? adresse;
+  final int? codePostal;
+  final String? ville;
+  final String? pays;
+
+  Location({
+    required this.latitude,
+    required this.longitude,
+    this.adresse,
+    this.codePostal,
+    this.ville,
+    this.pays,
+  });
+}
+
+
 class UserModel {
   final String id;
   final String username;
@@ -6,11 +25,11 @@ class UserModel {
   final String email;
   final String? phone;
   final String address;
-  final String city;
-  final String postalCode;
-  final String country;
+  final String? city;
+  final String? postalCode;
+  final String? country;
   final String password;
-  final String location;
+  final Location location;
 
   UserModel({
     required this.id,
@@ -20,9 +39,9 @@ class UserModel {
     required this.email,
     this.phone,
     required this.address,
-    required this.city,
-    required this.postalCode,
-    required this.country,
+    this.city,
+    this.postalCode,
+    this.country,
     required this.password,
     required this.location,
   });

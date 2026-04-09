@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'profile_screen.dart';
 
 class TutoralsScreen extends StatefulWidget {
-  const TutoralsScreen({Key? key}) : super(key: key);
+  const TutoralsScreen({super.key});
 
   @override
   State<TutoralsScreen> createState() => _TutoralsScreenState();
@@ -18,22 +18,17 @@ const listTutoriels = [
 String tutorielsChecked = '';
 
 class _TutoralsScreenState extends State<TutoralsScreen> {
-  late List<bool> buttonSelected = [true, false];
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Équipements',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Tutoriels'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -54,13 +49,19 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 20,
-          horizontal: screenWidth * 0.01,
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
-        child: Center(
-          child: Column(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.04),
+          child: Center(
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             spacing: 20,
@@ -70,7 +71,7 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
                   Image.asset('assets/logo.png', height: screenHeight / 6),
                   Text(
                     'Guide et conseils pour l\'entretien de votre piscine.',
-                    style: TextStyle(fontSize: screenWidth * 0.03),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                     textAlign: TextAlign.center,
                     softWrap: true,
                   ),
@@ -84,6 +85,7 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
                     .toList(),
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -93,12 +95,13 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
   Widget _buildListTutoriels(String title) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final selected = tutorielsChecked == title;
     return Container(
       margin: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: tutorielsChecked.compareTo(title) == 0
-            ? Colors.amber
-            : Colors.transparent,
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: selected ? Colors.amber : Colors.white24),
       ),
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
@@ -109,11 +112,7 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
         ),
         onPressed: () {
           setState(() {
-            if (tutorielsChecked.compareTo(title) == 0) {
-              tutorielsChecked = title;
-            } else {
-              tutorielsChecked = title;
-            }
+            tutorielsChecked = title;
           });
         },
         child: Row(
@@ -129,7 +128,7 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
               child: Text(
                 title,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: selected ? Colors.amber : Colors.white,
                   fontSize: screenWidth * 0.03,
                   fontWeight: FontWeight.bold,
                 ),
@@ -139,9 +138,7 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
             Expanded(
               child: Icon(
                 Icons.play_circle_outline_outlined,
-                color: tutorielsChecked.compareTo(title) == 0
-                    ? Colors.black
-                    : Colors.amber,
+                color: selected ? Colors.amber : Colors.white70,
                 size: screenWidth * 0.08,
               ),
             ),

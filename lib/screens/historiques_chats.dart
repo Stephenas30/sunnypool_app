@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
 final formatter = DateFormat('d MMM');
@@ -55,134 +54,99 @@ class _HistoriquesChatsState extends State<HistoriquesChats> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Historique Sunny',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Historique Sunny'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
         centerTitle: true,
       ),
-      body: Center(
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
         child: Padding(
-          padding: EdgeInsetsGeometry.symmetric(horizontal: 12, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               TextField(
+                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Rechercher dans les commentaires'
+                  hintText: 'Rechercher dans les commentaires',
+                  hintStyle: const TextStyle(color: Colors.white54),
+                  prefixIcon: const Icon(Icons.search, color: Colors.amber),
+                  filled: true,
+                  fillColor: const Color(0xFF1A1A1A),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Colors.amber),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Colors.amber),
+                  ),
                 ),
               ),
-              Column(
-                spacing: 8,
-                children: [
-                  // Text(
-                  //   'Historique des analyses',
-                  //   style: TextStyle(fontSize: screenWidth * 0.05),
-                  // ),
-                  ...List.generate(
-                    phEvolution.length,
-                    (index) => Container(
-                      margin: EdgeInsets.symmetric(vertical: 2, horizontal: 20),
-                      padding: EdgeInsets.all(16),
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.all(Radius.circular(20)),
-                        border: Border.all(color: Colors.white),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: phEvolution.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) => Card(
+                    child: ListTile(
+                      title: Text(
+                        'Analyse ${formatter.format(phEvolution[index].date)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Analyse ${phEvolution[index].date.toString()}',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.04,
-                                    ),
-                                  ),
-                                  Text(
-                                    'ph ${phEvolution[index].value} . chlore ${chloreEvolution[index].value} . TAC ${tacEvolution[index].value}',
-                                  ),
-                                ],
-                              ),
-                              Icon(
-                                Icons.search,
-                                size: screenWidth * 0.05,
-                                color: Colors.white,
-                              ),
-                            ],
-                          ),
-                        ],
+                      subtitle: Text(
+                        'pH ${phEvolution[index].value} • Chlore ${chloreEvolution[index].value} • TAC ${tacEvolution[index].value}',
+                        style: const TextStyle(color: Colors.white70),
                       ),
+                      trailing: const Icon(Icons.search, color: Colors.amber),
+                      onTap: () {},
                     ),
                   ),
-                ],
+                ),
               ),
-              Column(children: [
-                ElevatedButton(
-                    onPressed: () {},
-                    child: Text(
-                      'Nouvelle question à Sunny',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: screenWidth * 0.03,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.1,
-                        vertical: screenHeight * 0.01,
-                      ),
-                    ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () {},
+                  child: Text(
+                    'Nouvelle question à Sunny',
+                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
                   ),
-                  ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(
-                            255,
-                            99,
-                            99,
-                            99,
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.1,
-                            vertical: screenHeight * 0.01,
-                          ),
-                        ),
-                        child: Text(
-                          'Annuler',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.03,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-              ],)
-              
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white38),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: Text(
+                    'Annuler',
+                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

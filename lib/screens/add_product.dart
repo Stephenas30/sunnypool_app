@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
 
 class AddProduct extends StatefulWidget {
-  const AddProduct({Key? key}) : super(key: key);
+  const AddProduct({super.key});
 
   @override
   State<AddProduct> createState() {
@@ -14,18 +14,13 @@ class AddProduct extends StatefulWidget {
 class _AddProductState extends State<AddProduct> {
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Ajouter un produit',
-          style: TextStyle(color: Colors.yellow),
-        ),
-        backgroundColor: Colors.black,
+        title: const Text('Ajouter un produit'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.yellow),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -46,35 +41,57 @@ class _AddProductState extends State<AddProduct> {
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsetsGeometry.symmetric(horizontal: 12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsetsGeometry.symmetric(horizontal: 12, vertical: 12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
               Column(
                 children: [
                   Text(
                     'Scanner un produit',
-                    style: TextStyle(fontSize: screenWidth * 0.05),
+                    style: theme.textTheme.headlineSmall?.copyWith(color: Colors.amber),
                     textAlign: TextAlign.center,
                   ),
                   Container(
+                    margin: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.amber.withOpacity(0.22)),
+                    ),
                     child: Column(
                       children: [
-                        Icon(Icons.photo_camera),
+                        const Icon(Icons.photo_camera, color: Colors.amber, size: 30),
+                        const SizedBox(height: 10),
                         ElevatedButton(
                           onPressed: () {},
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.photo_camera),
-                              Text('Photographier l\'étiquette'),
+                              const Icon(Icons.photo_camera, color: Colors.black),
+                              const SizedBox(width: 8),
+                              const Text('Photographier l\'étiquette'),
                             ],
                           ),
                         ),
+                        const SizedBox(height: 8),
                         Text(
                           'Sunny analysera automatiquement les dosages et la composition.',
+                          style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
@@ -83,7 +100,7 @@ class _AddProductState extends State<AddProduct> {
               ),
               Column(
                 children: [
-                  Text('Photo de produit'),
+                  Text('Photo de produit', style: theme.textTheme.titleMedium),
                   Row(
                     children: [
                       Expanded(
@@ -109,19 +126,34 @@ class _AddProductState extends State<AddProduct> {
               ),
               Column(
                 children: [
-                  Text('Informations produit'),
+                  Text('Informations produit', style: theme.textTheme.titleMedium),
                   Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.amber.withOpacity(0.22)),
+                    ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Nom du produit'),
+                        Text('Nom du produit', style: theme.textTheme.bodyLarge),
                         TextField(
+                          style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             hintText: 'Marque',
-                            border: OutlineInputBorder(),
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            enabledBorder: const OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.amber),
+                            ),
                           ),
                         ),
-                        Text('Catégorie'),
-                        Text('Concentration'),
+                        const SizedBox(height: 8),
+                        Text('Catégorie', style: theme.textTheme.bodyLarge),
+                        Text('Concentration', style: theme.textTheme.bodyLarge),
                       ],
                     ),
                   ),
@@ -129,110 +161,39 @@ class _AddProductState extends State<AddProduct> {
               ),
               Column(
                 children: [
-                  ElevatedButton(
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
                     onPressed: () {},
                     child: Text(
                       'Ajouter ce produit',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: screenWidth * 0.03,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.1,
-                        vertical: screenHeight * 0.01,
-                      ),
+                      style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
                     ),
                   ),
-                  ElevatedButton(
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton(
                     onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 99, 99, 99),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.1,
-                        vertical: screenHeight * 0.01,
-                      ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white38),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: Text(
                       'Annuler',
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.03,
-                        color: Colors.white,
-                      ),
+                      style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
                     ),
+                  ),
                   ),
                 ],
               ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCardPhoto(String title) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    return Container(
-      margin: EdgeInsets.all(8),
-      padding: EdgeInsets.all(0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.amber),
-        borderRadius: BorderRadius.all(Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(title, style: TextStyle(fontSize: screenWidth * 0.03)),
-          Stack(
-            children: [
-              Column(
-                children: [
-                  Container(
-                    margin: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.amber),
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        'assets/piscine.png',
-                        fit: BoxFit.cover,
-                        height: screenHeight * 0.08,
-                        width: screenWidth * 0.5,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    'Ajouter une photo',
-                    style: TextStyle(fontSize: screenWidth * 0.03),
-                  ),
-                ],
-              ),
-
-              Align(
-                alignment: Alignment(0, 1), // relatif
-                child: Container(
-                  padding: EdgeInsets.all(5),
-                  // color: Colors.black.withOpacity(0.5),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.circular(50)),
-                    color: const Color.fromARGB(216, 255, 211, 50),
-                  ),
-                  child: Icon(
-                    Icons.photo_camera,
-                    color: const Color.fromARGB(255, 154, 116, 0),
-                    size: screenWidth * 0.07,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

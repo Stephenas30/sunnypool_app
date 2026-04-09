@@ -7,103 +7,117 @@ class OnbordingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Padding(
-        padding: EdgeInsetsGeometry.all(30),
-        child: Flex(
-          direction: Axis.vertical,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            Column(
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Image.asset('assets/icon.png', height: screenHeight / 4),
-                Text(
-                  'Bienvenue sur Sunny',
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.08,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Column(
+                  children: [
+                    Image.asset('assets/icon.png', height: screenHeight / 4.6),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Bienvenue sur Sunny',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.amber,
+                        fontWeight: FontWeight.bold,
+                        fontSize: screenWidth * 0.08,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'L\'assistant intelligent qui comprend votre piscine et vous guide au quotidien.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                        fontSize: screenWidth * 0.035,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-                  width: screenWidth,
-                  child: Text(
-                    'L\'assistant intelligent qui comprend votre piscine et vous guide au quotidien.',
-                    style: TextStyle(fontSize: screenWidth * 0.03),
-                    textAlign: TextAlign.center,
-                    softWrap: true,
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161616),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('☀️ Analyse de l\'eau', style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Text('🧪 Dosages précis', style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Text('🤖 Assistance IA 24/7', style: theme.textTheme.titleMedium),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: 10,
-              children: [
-                Text(
-                  '☀️​ Analyse de l\'eau',
-                  style: TextStyle(fontSize: screenWidth * 0.05),
-                ),
-                Text(
-                  '​🧪​ Dosages précis',
-                  style: TextStyle(fontSize: screenWidth * 0.05),
-                ),
-                Text(
-                  '​🤖​ Assistance de IA 24/7',
-                  style: TextStyle(fontSize: screenWidth * 0.05),
-                ),
-              ],
-            ),
-            Column(
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => RegisterScreen()),
-                    );
-                  },
-                  child: Text(
-                    'Créer un compte',
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.03,
-                      color: Colors.white,
+                Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => RegisterScreen()),
+                          );
+                        },
+                        child: Text(
+                          'Créer un compte',
+                          style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
+                        ),
+                      ),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => LoginScreen()),
-                    );
-                  },
-                  child: Text(
-                    'Se connecter',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: screenWidth * 0.03,
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => LoginScreen()),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.amber),
+                          foregroundColor: Colors.amber,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Text(
+                          'Se connecter',
+                          style: theme.textTheme.labelLarge?.copyWith(color: Colors.amber),
+                        ),
+                      ),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                  ),
+                  ],
                 ),
               ],
             ),
-            // ),
-          ],
+          ),
         ),
       ),
-      // ),
     );
   }
 }

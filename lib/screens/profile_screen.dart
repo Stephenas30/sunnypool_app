@@ -3,58 +3,64 @@ import '../utils/token_storage.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        centerTitle: true, 
-        title: Text("Profil", style: TextStyle(color: Colors.amber)),
-        iconTheme: IconThemeData(color: Colors.amber),
+        centerTitle: true,
+        title: const Text("Profil"),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF050505), Color(0xFF111111)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
             CircleAvatar(
               radius: 40,
               backgroundImage: AssetImage("assets/icon.png"),
             ),
             SizedBox(height: 20),
-            Text("Thomas Dupont",
-                style: TextStyle(color: Colors.amber, fontSize: 22)),
-            Text("thomas.dup***@email.com",
-                style: TextStyle(color: Colors.grey, fontSize: 14)),
+            Text("Thomas Dupont", style: theme.textTheme.headlineSmall?.copyWith(color: Colors.amber)),
+            Text("thomas.dup***@email.com", style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
             SizedBox(height: 30),
-            ListTile(
-              leading: Icon(Icons.person, color: Colors.amber),
-              title: Text("Informations personnelles",
-                  style: TextStyle(color: Colors.white)),
-            ),
-            ListTile(
-              leading: Icon(Icons.lock, color: Colors.amber),
-              title: Text("Modifier le mot de passe",
-                  style: TextStyle(color: Colors.white)),
-            ),
-            SwitchListTile(
-              value: true,
-              onChanged: (_) {},
-              activeColor: Colors.amber,
-              title: Text("Notifications reçues",
-                  style: TextStyle(color: Colors.white)),
-            ),
-            ListTile(
-              leading: Icon(Icons.history, color: Colors.amber),
-              title: Text("Historique des analyses",
-                  style: TextStyle(color: Colors.white)),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.person, color: Colors.amber),
+                    title: Text("Informations personnelles", style: TextStyle(color: Colors.white)),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.lock, color: Colors.amber),
+                    title: Text("Modifier le mot de passe", style: TextStyle(color: Colors.white)),
+                  ),
+                  SwitchListTile(
+                    value: true,
+                    onChanged: (_) {},
+                    activeThumbColor: Colors.amber,
+                    title: Text("Notifications reçues", style: TextStyle(color: Colors.white)),
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.history, color: Colors.amber),
+                    title: Text("Historique des analyses", style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
             ),
             Spacer(),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  foregroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
+              style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15)),
               onPressed: () async {
                 // Effacer le token
                 await TokenStorage.clearToken();
@@ -69,7 +75,8 @@ class ProfileScreen extends StatelessWidget {
               child: Text("Se déconnecter"),
             )
 
-          ],
+            ],
+          ),
         ),
       ),
     );

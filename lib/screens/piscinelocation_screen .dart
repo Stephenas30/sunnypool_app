@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:sunnypool_app/screens/add_piscine_screen.dart';
+import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
 import 'package:sunnypool_app/utils/user_location.dart';
 
-class UserlocationScreen extends StatefulWidget {
-  const UserlocationScreen({super.key});
+class PiscinelocationScreen  extends StatefulWidget {
+  const PiscinelocationScreen({super.key});
 
   @override
   State<StatefulWidget> createState() {
-    return _UserlocationScreen();
+    return _PiscinelocationScreen();
   }
 }
 
-class _UserlocationScreen extends State<UserlocationScreen> {
+class _PiscinelocationScreen extends State<PiscinelocationScreen> {
   final _formKey = GlobalKey<FormState>();
   final adresseController = TextEditingController();
   final codePostalController = TextEditingController();
@@ -187,7 +187,7 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                               Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => AddPiscineScreen(),
+                                builder: (_) => ConfigurationpiscineScreen(),
                               ),
                               );
                             } : null,
