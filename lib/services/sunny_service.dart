@@ -1,28 +1,36 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class SunnyService {
-  static const String baseUrl =
-      "https://n8n.trouvezpourmoi.com/webhook-test/sunny";
-      //"https://sunny.trouvezpourmoi.com/wp-json/sunny-pool/v1";
+  static const String baseUrl = "https://n8n.trouvezpourmoi.com/webhook/sunny";
+  //"https://sunny.trouvezpourmoi.com/wp-json/sunny-pool/v1";
 
-  Future<Map<String, dynamic>> sendChat(String token, MessageModel message) async {
-    print(token);
-    final response = await http.post(
-      Uri.parse("$baseUrl/v2"),
-      headers: {
-        "Content-Type": "application/json",
-        /* "Authorization": "Bearer $token", */
-      },
-      body: jsonEncode({
-        "message": message.message,
-        /* "image_base64": message.image_base64, */
-      }),
-    );
+  Future<Map<String, dynamic>> sendChat(
+    String sessionId,
+    MessageModel message,
+  ) async {
+    print(sessionId);
+    var uri = Uri.parse("$baseUrl/v2");
 
-    print(response.body);
+    var request = http.MultipartRequest('POST', uri);
+
+    request.fields['message'] = message.message;
+
+    if (message.image != null && message.image!.isNotEmpty) {
+        request.files.add(
+        await http.MultipartFile.fromPath('file', message.image ?? ''),
+      );
+      }
+
+    // 🔸 Envoi
+    var streamedResponse = await request.send();
+
+    // 🔸 Convertir en réponse classique
+    var response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -32,7 +40,10 @@ class SunnyService {
     }
   }
 
-  Future<Map<String, dynamic>> responseChat(String token, String conversationId) async {
+  Future<Map<String, dynamic>> responseChat(
+    String token,
+    String conversationId,
+  ) async {
     print(conversationId);
     final response = await http.get(
       Uri.parse("$baseUrl/chat/poll?conversation_id=$conversationId"),
@@ -49,5 +60,4 @@ class SunnyService {
       throw Exception("Erreur de connexion : \\${response.body}");
     }
   }
-
 }

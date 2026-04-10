@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
 import 'package:sunnypool_app/services/sunny_service.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
+import 'package:uuid/uuid.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ChatSunnyScreen extends StatefulWidget {
   const ChatSunnyScreen({Key? key}) : super(key: key);
@@ -17,24 +20,86 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> _messages = [];
+  final uuid = Uuid();
+  final ImagePicker _picker = ImagePicker();
+  String? sessionId = null;
   bool _isLoading = false;
+  File? image_pool;
 
   static const int _pollMaxAttempts = 25;
   static const Duration _pollInterval = Duration(seconds: 2);
 
-  void _sendMessage(String text) {
-    if (text.isEmpty) return;
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? photo = await _picker.pickImage(source: source);
 
     setState(() {
-      _messages.add({'role': 'user', 'text': text});
-      _isLoading = true;
+      image_pool = File(photo!.path);
     });
-
-    _controller.clear();
-    _getAIResponse(text);
   }
 
-  void _getAIResponse(String userMessage) {
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.amber),
+                title: const Text(
+                  'Sélectionner une photo',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera, color: Colors.amber),
+                title: const Text(
+                  'Prendre une photo',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _sendMessage(String text) {
+    if (text.isEmpty && image_pool == null) return;
+
+    setState(() {
+      _getAIResponse(text, image_pool);
+      _messages.add({
+        'role': 'user',
+        'text': text,
+        'image': image_pool?.path ?? '',
+      });
+      _isLoading = true;
+      image_pool = null;
+    });
+    _controller.clear();
+  }
+
+  void _getAIResponse(String userMessage, File? image) {
+    if (sessionId == null) {
+      setState(() {
+        sessionId = uuid.v4();
+      });
+    }
     TokenStorage.getToken().then((token) {
       if (token == null || token.isEmpty) {
         setState(() {
@@ -47,7 +112,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         return;
       }
       SunnyService()
-          .sendChat(token, MessageModel(message: userMessage))
+          .sendChat(
+            sessionId!,
+            MessageModel(message: userMessage, image: image?.path),
+          )
           .then((response) async {
             final responseChat = (response['output'] ?? '').toString();
             if (responseChat.isEmpty) {
@@ -148,7 +216,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
             padding: EdgeInsets.zero,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
                 decoration: const BoxDecoration(color: Color(0xFF1A1A1A)),
                 child: const Text(
                   'Menu Sunny',
@@ -161,8 +232,17 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.chat, color: Colors.amber),
-                title: const Text('Nouveau message', style: TextStyle(color: Colors.white)),
-                onTap: () => Navigator.pop(context),
+                title: const Text(
+                  'Nouveau message',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () => {
+                  setState(() {
+                    sessionId = null;
+                    _messages.clear();
+                  }),
+                  Navigator.pop(context),
+                },
               ),
               /* ListTile(
                 leading: const Icon(Icons.person, color: Colors.amber),
@@ -214,26 +294,48 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                     alignment: isUser
                         ? Alignment.centerRight
                         : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 5),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      constraints: const BoxConstraints(maxWidth: 290),
-                      decoration: BoxDecoration(
-                        color: isUser ? Colors.amber : const Color(0xFF1D1D1D),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isUser ? Colors.amber : Colors.white24,
+                    child: Column(
+                      crossAxisAlignment: isUser
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        if (msg['image'] != null && msg['image']!.isNotEmpty)
+                          Container(
+                            width: 100,
+                            height: 100,
+                            margin: const EdgeInsets.only(bottom: 6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              image: DecorationImage(
+                                image: FileImage(File(msg['image']!)),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          constraints: const BoxConstraints(maxWidth: 290),
+                          decoration: BoxDecoration(
+                            color: isUser
+                                ? Colors.amber
+                                : const Color(0xFF1D1D1D),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isUser ? Colors.amber : Colors.white24,
+                            ),
+                          ),
+                          child: Text(
+                            msg['text']!,
+                            style: TextStyle(
+                              color: isUser ? Colors.black : Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        msg['text']!,
-                        style: TextStyle(
-                          color: isUser ? Colors.black : Colors.white,
-                        ),
-                      ),
+                      ],
                     ),
                   );
                 },
@@ -246,35 +348,86 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 6, 10, 14),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Tapez votre message...',
-                        hintStyle: const TextStyle(color: Colors.white54),
-                        filled: true,
-                        fillColor: const Color(0xFF1A1A1A),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: const BorderSide(color: Colors.amber),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: const BorderSide(color: Colors.amber),
+                  image_pool != null
+                      ? Stack(
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                //borderRadius: BorderRadius.circular(12),
+                                image: DecorationImage(
+                                  image: FileImage(image_pool!),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    image_pool = null;
+                                  });
+                                },
+                                child: const CircleAvatar(
+                                  radius: 10,
+                                  backgroundColor: Colors.black54,
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Tapez votre message...',
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            filled: true,
+                            fillColor: const Color(0xFF1A1A1A),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: const BorderSide(color: Colors.amber),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: const BorderSide(color: Colors.amber),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: const Icon(
+                                Icons.add,
+                                color: Colors.white54,
+                              ),
+                              onPressed: _showImageSourceSheet,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    backgroundColor: Colors.amber,
-                    child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.black),
-                      onPressed: () => _sendMessage(_controller.text),
-                    ),
+                      const SizedBox(width: 8),
+                      CircleAvatar(
+                        backgroundColor: Colors.amber,
+                        child: IconButton(
+                          icon: const Icon(Icons.send, color: Colors.black),
+                          onPressed: () => _sendMessage(_controller.text),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
