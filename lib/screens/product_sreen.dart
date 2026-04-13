@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:sunnypool_app/models/product_model.dart';
+import 'package:sunnypool_app/screens/login_screen.dart';
+import 'package:sunnypool_app/services/pool_service.dart';
+import 'package:sunnypool_app/services/product_service.dart';
+import 'package:sunnypool_app/utils/token_storage.dart';
 import 'profile_screen.dart';
 
 class ProductScreen extends StatefulWidget {
@@ -8,34 +13,88 @@ class ProductScreen extends StatefulWidget {
   State<ProductScreen> createState() => _ProductScreenState();
 }
 
-List<Map<String, dynamic>> listProduct = [
-  {
-    'nameProduct': 'Chlore multifonctions',
-    'init_quantity': 5,
-    'quantity': 5,
-    'unity': 'litres',
-  },
-  {
-    'nameProduct': 'Ph moins',
-    'init_quantity': 5,
-    'quantity': 5,
-    'unity': 'litres',
-  },
-  {
-    'nameProduct': 'Ph plus',
-    'init_quantity': 5,
-    'quantity': 5,
-    'unity': 'litres',
-  },
-  {
-    'nameProduct': 'Sel pour électrolyseur',
-    'init_quantity': 25,
-    'quantity': 25,
-    'unity': 'kg',
-  },
-];
-
 class _ProductScreenState extends State<ProductScreen> {
+  List<ProductModel> listProduct = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    TokenStorage.getToken().then((tokenValue) {
+      ProductService()
+          .getAllProducts(tokenValue!)
+          .then((data) {
+            List<ProductModel> products = [];
+            List.generate(data['data'].length, (index) {
+              print("Données du produit ${index + 1}: ${data['data'][index]}");
+              final item = data['data'][index];
+              products.add(
+                ProductModel(
+                  id: item['id']!.toString(),
+                  categorie: Categorie
+                      .phMoins, // Remplacez par la logique de conversion appropriée
+                  marque: item['marque'] ?? '',
+                  name: item['nom_produit'] ?? '',
+                  quantity:
+                      int.tryParse(item['quantite']?.toString() ?? '0') ?? 0,
+                  unit: item['unite'] ?? '',
+                  photoFace: item['photo_face'] ?? '',
+                  commentaire: item['commentaire'] ?? '',
+                  photoNoticeDosage: item['photo_notice'] ?? '',
+                  dateAjout: DateTime.tryParse(item['date_ajout'] ?? ''),
+                  dateMiseAJour: DateTime.tryParse(
+                    item['date_mise_a_jour'] ?? '',
+                  ),
+                ),
+              );
+            });
+            setState(() {
+              listProduct = products;
+              _isLoading = false;
+            });
+            // Traitez les données des produits ici
+          })
+          .catchError((error) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Erreur lors du chargement des produits.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            setState(() {
+              _isLoading = false;
+              _errorMessage =
+                  'Erreur lors du chargement des produits. ${error.toString()}';
+            });
+            if (error is ApiException && error.statusCode == 401) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Session expirée. Veuillez vous reconnecter.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              TokenStorage.clearToken().then((_) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => LoginScreen()),
+                );
+              });
+            }
+          });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -77,7 +136,10 @@ class _ProductScreenState extends State<ProductScreen> {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.08),
+          padding: EdgeInsets.symmetric(
+            vertical: 20,
+            horizontal: screenWidth * 0.08,
+          ),
           child: Column(
             children: [
               Container(
@@ -94,7 +156,9 @@ class _ProductScreenState extends State<ProductScreen> {
                     const SizedBox(height: 10),
                     Text(
                       'Sélectionnez vos produits d\'entretien piscine pour que Sunny vous donne des recommandations précises et optimisées.',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -102,9 +166,55 @@ class _ProductScreenState extends State<ProductScreen> {
               ),
               const SizedBox(height: 14),
               Expanded(
-                child: ListView(
-                  children: listProduct.map((item) => _buildListProduct(item)).toList(),
-                ),
+                child: _isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(color: Colors.amber),
+                      )
+                    : _errorMessage != null
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _errorMessage!,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.redAccent,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: _loadProducts,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Réessayer'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : listProduct.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Aucun produit disponible pour le moment.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white54,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : RefreshIndicator(
+                        color: Colors.amber,
+                        onRefresh: _loadProducts,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
+                          ),
+                          itemCount: listProduct.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) =>
+                              _buildListProduct(listProduct[index]),
+                        ),
+                      ),
               ),
               const SizedBox(height: 10),
               SizedBox(
@@ -112,12 +222,13 @@ class _ProductScreenState extends State<ProductScreen> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () {
-                    print('Continuer');
                     print(listProduct);
                   },
                   child: Text(
                     'Continuer',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ),
@@ -129,11 +240,15 @@ class _ProductScreenState extends State<ProductScreen> {
                   onPressed: () {},
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white38),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: Text(
                     'Passer',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -144,7 +259,7 @@ class _ProductScreenState extends State<ProductScreen> {
     );
   }
 
-  Widget _buildListProduct(Map<String, dynamic> product) {
+  Widget _buildListProduct(ProductModel product) {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Container(
@@ -164,7 +279,7 @@ class _ProductScreenState extends State<ProductScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                product['nameProduct'],
+                product.name,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: screenWidth * 0.05,
@@ -182,7 +297,7 @@ class _ProductScreenState extends State<ProductScreen> {
                     size: screenWidth * 0.05,
                   ),
                   Text(
-                    '${product['init_quantity']} ${product['unity']}',
+                    '${product.quantity} ${product.unit}',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: screenWidth * 0.03,
@@ -213,10 +328,10 @@ class _ProductScreenState extends State<ProductScreen> {
                       child: IconButton(
                         onPressed: () {
                           setState(() {
-                            if (product['quantity'] > 0) {
-                              product['quantity'] -= product['init_quantity'];
+                            if (product.quantity > 1) {
+                              product.quantity -= 1;
                             } else {
-                              product['quantity'] = 0;
+                              product.quantity = 1;
                             }
                           });
                         },
@@ -226,7 +341,7 @@ class _ProductScreenState extends State<ProductScreen> {
                       ),
                     ),
                     Text(
-                      '${product['quantity']} ${product['unity']}',
+                      '${product.quantity} ${product.unit}',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: screenWidth * 0.03,
@@ -239,7 +354,7 @@ class _ProductScreenState extends State<ProductScreen> {
                       child: IconButton(
                         onPressed: () {
                           setState(() {
-                            product['quantity'] += product['init_quantity'];
+                            product.quantity += 1;
                           });
                         },
                         icon: Icon(Icons.add, color: Colors.amber, size: 18),

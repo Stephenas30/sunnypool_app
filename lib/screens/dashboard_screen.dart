@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/models/user_model.dart';
+import 'package:sunnypool_app/screens/add_piscine_screen.dart';
+import 'package:sunnypool_app/screens/add_product.dart';
+import 'package:sunnypool_app/screens/add_product_screen.dart';
 import 'package:sunnypool_app/screens/analyse_screen.dart';
 import 'package:sunnypool_app/screens/chat_sunny_screen.dart';
 import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
 import 'package:sunnypool_app/screens/historique_analyses.dart';
+import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/screens/mypiscine_screen.dart';
 import 'package:sunnypool_app/screens/photos_screen.dart';
 import 'package:sunnypool_app/screens/planning_entretien_screen.dart';
@@ -44,10 +48,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       loading = false;
     } else {
       TokenStorage.getToken().then((tokenValue) {
-        print(tokenValue);
+        //print(tokenValue);
         PoolService().getAllPool(tokenValue.toString()).then((
           Map<String, dynamic> pools,
         ) {
+           print(pools['data'][0]['id'].toString());
           Pool pool = Pool(
             id: pools['data'][0]['id'].toString(),
             name: pools['data'][0]['titre'] ?? 'not name',
@@ -68,6 +73,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             checkPool = pool;
             loading = false;
           });
+        }).catchError((error) {
+          if (error is ApiException && error.statusCode == 401) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Session expirée. Veuillez vous reconnecter.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            TokenStorage.clearToken().then((_) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => LoginScreen()),
+              );
+            });
+          }
         });
       });
     }
@@ -453,7 +473,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           _buildContainerRow(
                             Icons.add,
                             "Ajouter produit",
-                            ProductScreen(),
+                            AddProduct(),
                           ),
                         ],
                       ),

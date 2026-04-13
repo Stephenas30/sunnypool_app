@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/models/user_model.dart';
 import 'package:sunnypool_app/screens/dashboard_screen.dart';
+import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
@@ -133,7 +134,22 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     );
     try {
       final token = await TokenStorage.getToken();
-      await PoolService().addPool(token.toString(), newPool);
+      await PoolService().addPool(token.toString(), newPool).catchError((error) {
+          if (error is ApiException && error.statusCode == 401) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Session expirée. Veuillez vous reconnecter.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            TokenStorage.clearToken().then((_) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => LoginScreen()),
+              );
+            });
+          }
+        });
 
       if (!mounted) return;
 

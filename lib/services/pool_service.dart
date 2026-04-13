@@ -4,6 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:sunnypool_app/models/pool_model.dart';
 
+class ApiException implements Exception {
+  final int statusCode;
+  final dynamic data;
+
+  ApiException({required this.statusCode, this.data});
+
+  @override
+  String toString() => 'ApiException(statusCode: $statusCode, data: $data)';
+}
+
 class PoolService {
   static const String baseUrl =
       "https://sunny.trouvezpourmoi.com/wp-json/sunny-pool/v1";
@@ -23,7 +33,9 @@ class PoolService {
       final data = jsonDecode(response.body);
       return data;
     } else {
-      throw Exception("Erreur de connexion : \\${response.body}");
+      final errorData = jsonDecode(response.body);
+      throw ApiException(statusCode: response.statusCode, data: errorData);
+      //return jsonDecode(response.body);
     }
   }
 
@@ -52,7 +64,8 @@ class PoolService {
       final data = jsonDecode(response.body);
       return data;
     } else {
-      throw Exception("Erreur de connexion : \\${response.body}");
+      //throw Exception("Erreur de connexion : \\${response.body}");
+      return jsonDecode(response.body);
     }
   }
 }

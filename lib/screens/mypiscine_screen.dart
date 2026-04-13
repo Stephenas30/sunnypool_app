@@ -3,6 +3,7 @@ import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/models/user_model.dart';
 import 'package:sunnypool_app/screens/add_piscine_screen.dart';
 import 'package:sunnypool_app/screens/dashboard_screen.dart';
+import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/utils/list_piscine.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
@@ -50,33 +51,49 @@ class _MypiscineScreen extends State<MypiscineScreen> {
 
       print('Token récupéré : $tokenValue'); // Debug: Affiche le token
 
-      final pools = await PoolService().getAllPool(tokenValue.toString());
-      final fetchPool = <Pool>[];
+      await PoolService().getAllPool(tokenValue.toString()).then((pools) {
+        final fetchPool = <Pool>[];
 
-      if (pools['data'] is List) {
-        for (final item in pools['data']) {
-          fetchPool.add(
-            Pool(
-              name: item['titre'] ?? 'Piscine sans nom',
-              type: TypePool.beton,
-              dimension: Dimension(
-                length: parseDouble(item['caracteristiques']?['length']),
-                width: parseDouble(item['caracteristiques']?['width']),
-                depth: parseDouble(item['caracteristiques']?['depth']),
+        if (pools['data'] is List) {
+          for (final item in pools['data']) {
+            fetchPool.add(
+              Pool(
+                name: item['titre'] ?? 'Piscine sans nom',
+                type: TypePool.beton,
+                dimension: Dimension(
+                  length: parseDouble(item['caracteristiques']?['length']),
+                  width: parseDouble(item['caracteristiques']?['width']),
+                  depth: parseDouble(item['caracteristiques']?['depth']),
+                ),
+                location: Location(
+                  latitude: parseDouble(item['localisation']?['latitude']),
+                  longitude: parseDouble(item['localisation']?['longitude']),
+                ),
               ),
-              location: Location(
-                latitude: parseDouble(item['localisation']?['latitude']),
-                longitude: parseDouble(item['localisation']?['longitude']),
-              ),
-            ),
-          );
+            );
+          }
         }
-      }
 
-      setState(() {
-        piscines = fetchPool;
-        _isLoading = false;
-      });
+        setState(() {
+          piscines = fetchPool;
+          _isLoading = false;
+        });
+      }).catchError((error) {
+          if (error is ApiException && error.statusCode == 401) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Session expirée. Veuillez vous reconnecter.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            TokenStorage.clearToken().then((_) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => LoginScreen()),
+              );
+            });
+          }
+        });
     } catch (_) {
       setState(() {
         _errorMessage = 'Impossible de charger vos piscines pour le moment.';

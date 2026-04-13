@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 
 class SunnyService {
   static const String baseUrl = "https://n8n.trouvezpourmoi.com/webhook/sunny";
@@ -16,21 +14,33 @@ class SunnyService {
     print(sessionId);
     var uri = Uri.parse("$baseUrl/v2");
 
-    var request = http.MultipartRequest('POST', uri);
+    late http.Response response;
 
-    request.fields['message'] = message.message;
+    final hasImage = message.image != null && message.image!.isNotEmpty;
 
-    if (message.image != null && message.image!.isNotEmpty) {
-        request.files.add(
-        await http.MultipartFile.fromPath('file', message.image ?? ''),
+    if (hasImage) {
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['sessionId'] = sessionId
+        ..fields['message'] = message.message;
+
+      request.files.add(
+        await http.MultipartFile.fromPath('file', message.image!),
       );
-      }
 
-    // 🔸 Envoi
-    var streamedResponse = await request.send();
-
-    // 🔸 Convertir en réponse classique
-    var response = await http.Response.fromStream(streamedResponse);
+      final streamedResponse = await request.send();
+      response = await http.Response.fromStream(streamedResponse);
+    } else {
+      response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'sessionId': sessionId,
+          'message': message.message,
+        }),
+      );
+    }
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

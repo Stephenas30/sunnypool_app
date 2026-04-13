@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:sunnypool_app/models/message_model.dart';
+import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
+import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/services/sunny_service.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
 import 'package:uuid/uuid.dart';
@@ -159,6 +161,21 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               });
               _isLoading = false;
             });
+
+            if (error is ApiException && error.statusCode == 401) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Session expirée. Veuillez vous reconnecter.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              TokenStorage.clearToken().then((_) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => LoginScreen()),
+                );
+              });
+            }
           });
     });
   }
