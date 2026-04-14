@@ -48,7 +48,7 @@ class PoolService {
         "Authorization": "Bearer $token",
       },
       body: jsonEncode({
-        "name_piscine": pool.name,
+        "nom_piscine": pool.name,
         "type_piscine": pool.type.name,
         "longueur": pool.dimension.length,
         "largeur": pool.dimension.width,

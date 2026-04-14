@@ -74,8 +74,8 @@ class _AddProductState extends State<AddProduct> {
       name: _nameController.text,
       quantity: quantity,
       unit: unit,
-      photoFace: photoFace,
-      photoNoticeDosage: photoNoticeDosage,
+      photoFace: photoFace?.path,
+      photoNoticeDosage: photoNoticeDosage?.path,
     );
 
     TokenStorage.getToken().then((tokenValue) {
@@ -268,7 +268,7 @@ class _AddProductState extends State<AddProduct> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _buildPhotoButton(
+                        child:  _buildPhotoButton(
                           icon: Icons.add_a_photo,
                           label: 'Face avant',
                           onPressed: () => _takePhoto('Face avant'),
@@ -360,12 +360,21 @@ class _AddProductState extends State<AddProduct> {
     required VoidCallback onPressed,
   }) {
     return SizedBox(
-      height: 48,
-      child: ElevatedButton.icon(
+      height: 100,
+      child: Column(
+        children: [
+          label == 'Face avant' && photoFace != null
+              ? Image.file(photoFace!, height: 30, width: 50, fit: BoxFit.cover)
+              : label == 'Étiquette' && photoNoticeDosage != null
+                  ? Image.file(photoNoticeDosage!, height: 30, width: 50, fit: BoxFit.cover)
+                  : const SizedBox(height: 30),
+          ElevatedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, color: Colors.black),
         label: Text(label),
       ),
+        ],
+      ) 
     );
   }
 

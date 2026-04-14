@@ -37,13 +37,12 @@ class _ProductScreenState extends State<ProductScreen> {
           .then((data) {
             List<ProductModel> products = [];
             List.generate(data['data'].length, (index) {
-              print("Données du produit ${index + 1}: ${data['data'][index]}");
               final item = data['data'][index];
+              print(item['categorie']);
               products.add(
                 ProductModel(
                   id: item['id']!.toString(),
-                  categorie: Categorie
-                      .phMoins, // Remplacez par la logique de conversion appropriée
+                  categorie: CategorieExtension.fromString(item['categorie']),
                   marque: item['marque'] ?? '',
                   name: item['nom_produit'] ?? '',
                   quantity:
@@ -274,40 +273,55 @@ class _ProductScreenState extends State<ProductScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                product.name,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: screenWidth * 0.05,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.opacity_outlined,
-                    color: Colors.amber,
-                    size: screenWidth * 0.05,
-                  ),
-                  Text(
-                    '${product.quantity} ${product.unit}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: screenWidth * 0.03,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ],
+          Image.network(
+            product.photoFace!,
+            width: screenWidth * 0.10,
+            height: screenWidth * 0.10,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              width: screenWidth * 0.10,
+              height: screenWidth * 0.10,
+              color: Colors.white12,
+              child: Icon(Icons.broken_image, color: Colors.white30),
+            ),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: screenWidth * 0.05,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.opacity_outlined,
+                      color: Colors.amber,
+                      size: screenWidth * 0.05,
+                    ),
+                    Text(
+                      '${product.quantity} ${product.unit}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: screenWidth * 0.03,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             spacing: 12,

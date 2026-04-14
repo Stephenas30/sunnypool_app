@@ -6,6 +6,7 @@ import 'package:sunnypool_app/screens/dashboard_screen.dart';
 import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/utils/list_piscine.dart';
+import 'package:sunnypool_app/utils/poolId_storage.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
 
 double parseDouble(dynamic value) {
@@ -58,6 +59,7 @@ class _MypiscineScreen extends State<MypiscineScreen> {
           for (final item in pools['data']) {
             fetchPool.add(
               Pool(
+                id: item['id']?.toString(),
                 name: item['titre'] ?? 'Piscine sans nom',
                 type: TypePool.beton,
                 dimension: Dimension(
@@ -68,6 +70,11 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                 location: Location(
                   latitude: parseDouble(item['localisation']?['latitude']),
                   longitude: parseDouble(item['localisation']?['longitude']),
+                ),
+                photoPool: PhotoPool(
+                  photoBassin: item['photos']?[0]?['url'] ?? 'assets/piscine.png',
+                  photoEnvironnement: item['photos']?[0]?['full'] ?? '',
+                  photoLocalTechn: item['photos']?[0]?['thumbnail'] ?? '',
                 ),
               ),
             );
@@ -256,11 +263,17 @@ class _MypiscineScreen extends State<MypiscineScreen> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(18),
-                child: Image.asset(
-                  'assets/piscine.png',
-                  width: 96,
-                  height: 96,
+                child: Image.network(
+                  pool.photoPool?.photoBassin ?? 'assets/piscine.png',
+                  width: 80,
+                  height: 80,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 80,
+                    height: 80,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.pool, color: Colors.white54, size: 40),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
