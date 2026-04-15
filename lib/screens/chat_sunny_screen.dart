@@ -115,11 +115,12 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       }
       SunnyService()
           .sendChat(
+            token,
             sessionId!,
             MessageModel(message: userMessage, image: image?.path),
           )
           .then((response) async {
-            final responseChat = (response['output'] ?? '').toString();
+            /* final responseChat = (response['output'] ?? '').toString();
             if (responseChat.isEmpty) {
               setState(() {
                 _messages.add({
@@ -134,13 +135,25 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
             setState(() {
               _messages.add({'role': 'assistant', 'text': responseChat});
               _isLoading = false;
-            });
+            }); */
+            print(response);
 
-            /* try {
-              final finalResponse = await _pollUntilCompleted(token, conversationId);
+            try {
+              if(response['response'] == "pending") {
+                setState(() {
+                  _messages.add({
+                    'role': 'assistant',
+                    'text': 'En cours de traitement. Merci de patienter...',
+                  });
+                  _isLoading = false;
+                });
+              }
+              final finalResponse = await _pollUntilCompleted(token, response['conversation_id']);
               if (!mounted) return;
 
-              
+              setState(() {
+                _messages[_messages.length - 1] = {'role': 'assistant', 'text': finalResponse};
+                _isLoading = false;
               });
             } catch (error) {
               if (!mounted) return;
@@ -151,7 +164,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                 });
                 _isLoading = false;
               });
-            } */
+            }
           })
           .catchError((error) {
             setState(() {
@@ -180,23 +193,24 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     });
   }
 
-  /* Future<String> _pollUntilCompleted(String token, String conversationId) async {
+  Future<String> _pollUntilCompleted(String token, String conversationId) async {
     for (int attempt = 0; attempt < _pollMaxAttempts; attempt++) {
       final res = await SunnyService().responseChat(token, conversationId);
-      //final found = res['found'] == true;
+      print(res);
+      final found = res['found'] == true;
 
-      //if (found) {
-        final response = (res[0]['response'] ?? '').toString().trim();
+      if (found) {
+        final response = (res['response'] ?? '').toString().trim();
         if (response.isNotEmpty) {
           return response;
         }
-      //}
+      }
 
       await Future.delayed(_pollInterval);
     }
 
     throw TimeoutException('Polling timeout');
-  } */
+  }
 
   @override
   Widget build(BuildContext context) {
