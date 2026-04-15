@@ -18,7 +18,7 @@ Future<XFile?> compressImage(String path) async {
 }
 
 class SunnyService {
-  static const String baseUrl = "https://n8n.trouvezpourmoi.com/webhook-test/sunny";
+  static const String baseUrl = "https://n8n.trouvezpourmoi.com/webhook/sunny";
   //"https://sunny.trouvezpourmoi.com/wp-json/sunny-pool/v1";
 
   Future<Map<String, dynamic>> sendChat(
