@@ -238,7 +238,9 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                     icon: const Icon(Icons.add),
                     label: Text(
                       'Ajouter une piscine',
-                      style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
+                      style: theme.textTheme.labelLarge?.copyWith(color: Colors.black, 
+                        fontSize: screenWidth * 0.03
+                      ),
                     ),
                   ),
                 ),

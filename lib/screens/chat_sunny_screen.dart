@@ -28,8 +28,20 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   bool _isLoading = false;
   File? image_pool;
 
+  static const _borderColor = Color(0x33FFD54F);
+
   static const int _pollMaxAttempts = 25;
   static const Duration _pollInterval = Duration(seconds: 2);
+
+  Map<String, bool> optionSend = {
+    'meteo': false, 
+    'historique': false, 
+    'produits': false,
+    'alertes': false, 
+    'planning': false, 
+    'coordonnees': false
+  };
+  
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? photo = await _picker.pickImage(source: source);
@@ -113,18 +125,18 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         });
         return;
       }
-      setState(() {
+      /*       setState(() {
               _messages.add({'role': 'assistant', 'text': "Réponse en cours..."});
               _isLoading = false;
-            });
+            }); */
       SunnyService()
           .sendChat(
+            token,
             sessionId!,
-            MessageModel(message: userMessage, image: image?.path),
+            MessageModel(message: userMessage, image: image?.path, data_options: optionSend),
           )
           .then((response) async {
-            final responseChat = (response['output'] ?? '').toString();
-
+            /* final responseChat = (response['output'] ?? '').toString();
             if (responseChat.isEmpty) {
               setState(() {
                 _messages[_messages.length - 1] = {
@@ -137,18 +149,33 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
             }
 
             setState(() {
-              _messages[_messages.length - 1] = {
-                'role': 'assistant',
-                'text': responseChat,
-              };
+              _messages.add({'role': 'assistant', 'text': responseChat});
               _isLoading = false;
-            });
+            }); */
+            print(response);
 
-            /* try {
-              final finalResponse = await _pollUntilCompleted(token, conversationId);
+            try {
+              if (response['response'] == "pending") {
+                setState(() {
+                  _messages.add({
+                    'role': 'assistant',
+                    'text': 'En cours de traitement. Merci de patienter...',
+                  });
+                  _isLoading = false;
+                });
+              }
+              final finalResponse = await _pollUntilCompleted(
+                token,
+                response['conversation_id'],
+              );
               if (!mounted) return;
 
-              
+              setState(() {
+                _messages[_messages.length - 1] = {
+                  'role': 'assistant',
+                  'text': finalResponse,
+                };
+                _isLoading = false;
               });
             } catch (error) {
               if (!mounted) return;
@@ -159,7 +186,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                 });
                 _isLoading = false;
               });
-            } */
+            }
           })
           .catchError((error) {
             setState(() {
@@ -188,26 +215,33 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     });
   }
 
-  /* Future<String> _pollUntilCompleted(String token, String conversationId) async {
+  Future<String> _pollUntilCompleted(
+    String token,
+    String conversationId,
+  ) async {
     for (int attempt = 0; attempt < _pollMaxAttempts; attempt++) {
       final res = await SunnyService().responseChat(token, conversationId);
-      //final found = res['found'] == true;
+      print(res);
+      final found = res['found'] == true;
 
-      //if (found) {
-        final response = (res[0]['response'] ?? '').toString().trim();
+      if (found) {
+        final response = (res['response'] ?? '').toString().trim();
         if (response.isNotEmpty) {
           return response;
         }
-      //}
+      }
 
       await Future.delayed(_pollInterval);
     }
 
     throw TimeoutException('Polling timeout');
-  } */
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       key: scaffoldKey,
       appBar: AppBar(
@@ -415,42 +449,76 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                         )
                       : const SizedBox.shrink(),
                   const SizedBox(height: 6),
-                  Row(
+                  Column(
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _controller,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            hintText: 'Tapez votre message...',
-                            hintStyle: const TextStyle(color: Colors.white54),
-                            filled: true,
-                            fillColor: const Color(0xFF1A1A1A),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: const BorderSide(color: Colors.amber),
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        alignment: WrapAlignment.center,
+                        children: optionSend.keys.map((item) {
+                          //final selected = optionSendChecked.contains(item);
+                          return FilterChip(
+                            label: Text(item, style: TextStyle(fontSize: screenWidth * 0.02),),
+                            selected: optionSend[item]!,
+                            selectedColor: Colors.amber,
+                            checkmarkColor: Colors.black,
+                            labelStyle: TextStyle(
+                              color: optionSend[item]! ? Colors.black : Colors.white,
+                              fontWeight: FontWeight.w600,
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: const BorderSide(color: Colors.amber),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: const Icon(
-                                Icons.add,
-                                color: Colors.white54,
+                            side: const BorderSide(color: _borderColor),
+                            onSelected: (_) {
+                              setState(() {
+                                optionSend[item] = !optionSend[item]!;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _controller,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                hintText: 'Tapez votre message...',
+                                hintStyle: const TextStyle(
+                                  color: Colors.white54,
+                                ),
+                                filled: true,
+                                fillColor: const Color(0xFF1A1A1A),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: const BorderSide(
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: const BorderSide(
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: const Icon(
+                                    Icons.add,
+                                    color: Colors.white54,
+                                  ),
+                                  onPressed: _showImageSourceSheet,
+                                ),
                               ),
-                              onPressed: _showImageSourceSheet,
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      CircleAvatar(
-                        backgroundColor: Colors.amber,
-                        child: IconButton(
-                          icon: const Icon(Icons.send, color: Colors.black),
-                          onPressed: () => _sendMessage(_controller.text),
-                        ),
+                          const SizedBox(width: 8),
+                          CircleAvatar(
+                            backgroundColor: Colors.amber,
+                            child: IconButton(
+                              icon: const Icon(Icons.send, color: Colors.black),
+                              onPressed: () => _sendMessage(_controller.text),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
