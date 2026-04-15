@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -17,6 +18,19 @@ class ApiException implements Exception {
 class PoolService {
   static const String baseUrl =
       "https://sunny.trouvezpourmoi.com/wp-json/sunny-pool/v1";
+
+  Future<String?> _toBase64IfFilePath(String? value) async {
+    if (value == null || value.isEmpty) return null;
+
+    final file = File(value);
+    if (await file.exists()) {
+      final bytes = await file.readAsBytes();
+      return base64Encode(bytes);
+    }
+
+    return value;
+  }
+
 
   Future<Map<String, dynamic>> getAllPool(String token) async {
     final response = await http.get(
@@ -41,6 +55,27 @@ class PoolService {
 
   Future<Map<String, dynamic>> addPool(String token, Pool pool) async {
     print(token);
+
+    final imageBase64 = await _toBase64IfFilePath(pool.photoPool!.photoBassin);
+
+
+    /* dynamic poolData = jsonEncode({
+        "nom_piscine": pool.name,
+        "type_piscine": pool.type.name,
+        "longueur": pool.dimension.length,
+        "largeur": pool.dimension.width,
+        "profondeur": pool.dimension.depth,
+        "adresse": pool.location.adresse,
+        "code_postal": pool.location.codePostal,
+        "ville": pool.location.ville,
+        "pays": pool.location.pays,
+        "image_base64": imageBase64,
+      });
+
+      print(poolData);
+
+      return poolData; */
+
     final response = await http.post(
       Uri.parse("$baseUrl/pool"),
       headers: {
@@ -57,6 +92,7 @@ class PoolService {
         "code_postal": pool.location.codePostal,
         "ville": pool.location.ville,
         "pays": pool.location.pays,
+        "image_base64": imageBase64,
       }),
     );
 

@@ -43,7 +43,7 @@ class SunnyService {
         await http.MultipartFile.fromPath('file', compressed!.path),
       );
 
-      final streamedResponse = await request.send().timeout(Duration(seconds: 20));
+      final streamedResponse = await request.send()/* .timeout(Duration(seconds: 20)) */;
       response = await http.Response.fromStream(streamedResponse);
     } else {
       response = await http.post(

@@ -113,6 +113,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         });
         return;
       }
+      setState(() {
+              _messages.add({'role': 'assistant', 'text': "Réponse en cours..."});
+              _isLoading = false;
+            });
       SunnyService()
           .sendChat(
             sessionId!,
@@ -120,19 +124,23 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           )
           .then((response) async {
             final responseChat = (response['output'] ?? '').toString();
+
             if (responseChat.isEmpty) {
               setState(() {
-                _messages.add({
+                _messages[_messages.length - 1] = {
                   'role': 'assistant',
                   'text': 'Conversation invalide. Merci de réessayer.',
-                });
+                };
                 _isLoading = false;
               });
               return;
             }
 
             setState(() {
-              _messages.add({'role': 'assistant', 'text': responseChat});
+              _messages[_messages.length - 1] = {
+                'role': 'assistant',
+                'text': responseChat,
+              };
               _isLoading = false;
             });
 

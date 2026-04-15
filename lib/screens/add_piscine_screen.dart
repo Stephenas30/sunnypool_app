@@ -17,11 +17,12 @@ import 'package:sunnypool_app/widget/custom_stepper.dart';
 
 class AddPiscineScreen extends StatefulWidget {
   final Function(Pool)? onAddPool;
+  final bool isFirstTime;
 
-  const AddPiscineScreen({super.key, this.onAddPool});
+  const AddPiscineScreen({super.key, this.onAddPool, this.isFirstTime = false});
 
   @override
-  _AddPiscineScreen createState() {
+  State<AddPiscineScreen> createState() {
     return _AddPiscineScreen();
   }
 }
@@ -31,8 +32,15 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   final _formKey2 = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
+  static const _surfaceColor = Color(0xFF161616);
+  static const _surfaceSoftColor = Color(0xFF1E1E1E);
+  static const _borderColor = Color(0x33FFD54F);
+
   int _currentStep = 0;
   bool _isSubmitting = false;
+  bool _isLoadingLocation = false;
+  bool _locationChecked = false;
+  bool _isAddingProduct = false;
 
   final nameController = TextEditingController();
   final lengthController = TextEditingController();
@@ -48,48 +56,498 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   final villeController = TextEditingController();
   final paysController = TextEditingController();
 
+  final _productNameController = TextEditingController();
+  final _productBrandController = TextEditingController();
+  final _productQuantityController = TextEditingController();
+  final _productUnitController = TextEditingController();
+
   Pool? pool;
 
   TypePool typePool = TypePool.beton;
-  double? volumePool;
+  double volumePool = 0;
 
   bool priseBalai = false;
   BondeFond bondeFond = BondeFond.non;
   Pompe pompe = Pompe.standard;
   TypeFiltre typeFiltre = TypeFiltre.sable;
+  Categorie? _selectedCategory;
 
   List<Traitement> traitementChecked = [Traitement.chlore];
 
-  File? image_ensemble;
-  File? image_eau;
-  File? image_local;
-  File? image_equipements;
+  File? imageEnsemble;
+  File? imageEau;
+  File? imageLocal;
+  File? imageEquipements;
 
   Location? location;
 
   File? photoFace;
   File? photoNoticeDosage;
+  final List<ProductModel> _addedProducts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _updateVolume();
+    _syncLocationCompletion();
+    _loadLocation();
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    lengthController.dispose();
+    widthController.dispose();
+    depthController.dispose();
+    nbrSkimmersController.dispose();
+    nbrRefoulementController.dispose();
+    puissancePompeController.dispose();
+    adresseController.dispose();
+    codePostalController.dispose();
+    villeController.dispose();
+    paysController.dispose();
+    _productNameController.dispose();
+    _productBrandController.dispose();
+    _productQuantityController.dispose();
+    _productUnitController.dispose();
+    super.dispose();
+  }
+
+  double _parseDecimal(String input) {
+    return double.tryParse(input.trim().replaceAll(',', '.')) ?? 0;
+  }
+
+  void _updateVolume() {
+    final nextVolume =
+        _parseDecimal(lengthController.text) *
+        _parseDecimal(widthController.text) *
+        _parseDecimal(depthController.text);
+
+    if (nextVolume != volumePool) {
+      setState(() {
+        volumePool = nextVolume;
+      });
+    }
+  }
+
+  void _syncLocationCompletion() {
+    final isComplete =
+        adresseController.text.trim().isNotEmpty &&
+        codePostalController.text.trim().isNotEmpty &&
+        villeController.text.trim().isNotEmpty &&
+        paysController.text.trim().isNotEmpty;
+
+    if (_locationChecked != isComplete) {
+      setState(() {
+        _locationChecked = isComplete;
+      });
+    }
+  }
+
+  String _formatEnumLabel(String value) {
+    final normalized = value
+        .replaceAll('_', ' ')
+        .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}')
+        .trim();
+
+    if (normalized.isEmpty) return value;
+
+    return normalized[0].toUpperCase() + normalized.substring(1);
+  }
+
+  InputDecoration _fieldDecoration({
+    required String label,
+    String? hint,
+    IconData? icon,
+    String? suffixText,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      suffixText: suffixText,
+      prefixIcon: icon != null ? Icon(icon, color: Colors.amber) : null,
+      labelStyle: const TextStyle(color: Colors.amber),
+      hintStyle: const TextStyle(color: Colors.white54),
+      filled: true,
+      fillColor: _surfaceSoftColor,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.amber, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    String? subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _surfaceColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /* Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+          ],
+          const SizedBox(height: 14), */
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    String? hint,
+    IconData? icon,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    TextInputAction textInputAction = TextInputAction.next,
+    String? suffixText,
+    ValueChanged<String>? onChanged,
+  }) {
+    return TextField(
+      controller: controller,
+      style: const TextStyle(color: Colors.white),
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      textInputAction: textInputAction,
+      onChanged: onChanged,
+      decoration: _fieldDecoration(
+        label: label,
+        hint: hint,
+        icon: icon,
+        suffixText: suffixText,
+      ),
+    );
+  }
+
+  Widget _buildFormFieldShell({
+    required Widget child,
+    double minWidth = 220,
+    double maxWidth = 360,
+  }) {
+    final normalizedMaxWidth = maxWidth < minWidth ? minWidth : maxWidth;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: minWidth,
+        maxWidth: normalizedMaxWidth,
+      ),
+      child: child,
+    );
+  }
 
   Future<void> _takePhoto(String imageType) async {
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-    if (photo != null) {
+    if (photo == null) return;
+
+    setState(() {
+      switch (imageType) {
+        case 'Vue d\'ensemble':
+          imageEnsemble = File(photo.path);
+          break;
+        case 'Eau de la piscine':
+          imageEau = File(photo.path);
+          break;
+        case 'Local technique':
+          imageLocal = File(photo.path);
+          break;
+        case 'Equipements':
+          imageEquipements = File(photo.path);
+          break;
+      }
+    });
+  }
+
+  Future<void> _takePhotoProd(String imageType) async {
+    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    if (photo == null) return;
+
+    setState(() {
+      switch (imageType) {
+        case 'Face avant':
+          photoFace = File(photo.path);
+          break;
+        case 'Étiquette':
+          photoNoticeDosage = File(photo.path);
+          break;
+      }
+    });
+  }
+
+  Future<void> _loadLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      final address = await getFullAddress();
+
+      if (address.isEmpty) {
+        _showStepError('Impossible de récupérer votre position GPS.');
+        return;
+      }
+
+      final latitude = double.tryParse(address['latitude'] ?? '') ?? 0;
+      final longitude = double.tryParse(address['longitude'] ?? '') ?? 0;
+      final postalCode = int.tryParse(address['postalCode'] ?? '') ?? 0;
+
       setState(() {
-        switch (imageType) {
-          case 'Vue d\'ensemble':
-            image_ensemble = File(photo.path);
-            break;
-          case 'Eau de la piscine':
-            image_eau = File(photo.path);
-            break;
-          case 'Local technique':
-            image_local = File(photo.path);
-            break;
-          case 'Equipements':
-            image_equipements = File(photo.path);
-            break;
-        }
+        location = Location(
+          latitude: latitude,
+          longitude: longitude,
+          adresse: address['street'] ?? '',
+          codePostal: postalCode,
+          ville: address['locality'] ?? '',
+          pays: address['country'] ?? '',
+        );
+
+        adresseController.text = address['street'] ?? '';
+        codePostalController.text = address['postalCode'] ?? '';
+        villeController.text = address['locality'] ?? '';
+        paysController.text = address['country'] ?? '';
       });
+
+      _syncLocationCompletion();
+    } catch (_) {
+      _showStepError('Erreur lors de la récupération de la localisation.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
     }
+  }
+
+  Future<void> _addProduct() async {
+    if (_isAddingProduct) return;
+
+    final quantity = int.tryParse(_productQuantityController.text.trim());
+
+    if (_productNameController.text.trim().isEmpty ||
+        _productBrandController.text.trim().isEmpty ||
+        _selectedCategory == null ||
+        quantity == null ||
+        quantity <= 0 ||
+        _productUnitController.text.trim().isEmpty) {
+      _showStepError('Complétez les champs produit obligatoires.');
+      return;
+    }
+
+    setState(() {
+      _isAddingProduct = true;
+    });
+
+    try {
+      final product = ProductModel(
+        categorie: _selectedCategory!,
+        marque: _productBrandController.text.trim(),
+        name: _productNameController.text.trim(),
+        quantity: quantity,
+        unit: _productUnitController.text.trim(),
+        photoFace: photoFace?.path,
+        photoNoticeDosage: photoNoticeDosage?.path,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _addedProducts.add(product);
+        _productNameController.clear();
+        _productBrandController.clear();
+        _productQuantityController.clear();
+        _productUnitController.clear();
+        _selectedCategory = null;
+        photoFace = null;
+        photoNoticeDosage = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Produit ajouté à la liste.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (_) {
+      _showStepError('Erreur de connexion lors de l\'ajout du produit.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingProduct = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildProductListItem(ProductModel product, int index) {
+    final hasFacePhoto = (product.photoFace ?? '').isNotEmpty;
+    final hasNoticePhoto = (product.photoNoticeDosage ?? '').isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _surfaceSoftColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _borderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.amber,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '${index + 1}',
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${product.marque} • ${product.categorie.label}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Quantité: ${product.quantity} ${product.unit}',
+                  style: const TextStyle(color: Colors.amber, fontSize: 12),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    _buildProductPhotoChip(
+                      label: 'Face',
+                      enabled: hasFacePhoto,
+                      icon: Icons.add_a_photo,
+                    ),
+                    _buildProductPhotoChip(
+                      label: 'Étiquette',
+                      enabled: hasNoticePhoto,
+                      icon: Icons.text_snippet,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Supprimer ce produit',
+            onPressed: () {
+              setState(() {
+                _addedProducts.removeAt(index);
+              });
+            },
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductPhotoChip({
+    required String label,
+    required bool enabled,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: enabled ? const Color(0x1AFFD54F) : Colors.white10,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: enabled ? Colors.amber : Colors.white24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: enabled ? Colors.amber : Colors.white54),
+          const SizedBox(width: 4),
+          Text(
+            '$label ${enabled ? "OK" : "N/A"}',
+            style: TextStyle(
+              color: enabled ? Colors.amber : Colors.white60,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddedProductsList() {
+    if (_addedProducts.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: _surfaceSoftColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _borderColor),
+        ),
+        child: const Text(
+          'Aucun produit ajouté pour le moment.',
+          style: TextStyle(color: Colors.white70),
+        ),
+      );
+    }
+
+    return Column(
+      children: List.generate(
+        _addedProducts.length,
+        (index) => _buildProductListItem(_addedProducts[index], index),
+      ),
+    );
   }
 
   Future<void> _submitPool() async {
@@ -100,64 +558,48 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
       _isSubmitting = true;
     });
 
-    /*     if (_formKey.currentState!.validate() &&
-        _formKey2.currentState!.validate()) { */
     final newPool = Pool(
-      name: nameController.text,
+      name: nameController.text.trim(),
       type: typePool,
       dimension: Dimension(
-        length: double.tryParse(lengthController.text) ?? 0,
-        width: double.tryParse(widthController.text) ?? 0,
-        depth: double.tryParse(depthController.text) ?? 0,
+        length: _parseDecimal(lengthController.text),
+        width: _parseDecimal(widthController.text),
+        depth: _parseDecimal(depthController.text),
       ),
       traitements: traitementChecked,
-      /* .map((t) => Traitement(type: t, dateDernierTraitement: DateTime.now()))
-            .toList(), */
       hydraulique: Hydraulique(
-        skimmers: int.tryParse(nbrSkimmersController.text) ?? 0,
-        refoulement: int.tryParse(nbrRefoulementController.text) ?? 0,
+        skimmers: int.tryParse(nbrSkimmersController.text.trim()) ?? 0,
+        refoulement: int.tryParse(nbrRefoulementController.text.trim()) ?? 0,
         priseBalai: priseBalai,
         bondeFond: bondeFond,
       ),
       filtration: Filtration(
         pompe: pompe,
-        puissance: double.tryParse(puissancePompeController.text) ?? 0,
+        puissance: _parseDecimal(puissancePompeController.text),
         type: typeFiltre,
       ),
       photoPool: PhotoPool(
-        photoBassin: image_ensemble?.path ?? '',
-        photoEnvironnement: image_eau?.path ?? '',
-        photoLocalTechn: image_local?.path ?? '',
+        photoBassin: imageEnsemble?.path ?? '',
+        photoEnvironnement: imageEau?.path ?? '',
+        photoLocalTechn: imageLocal?.path ?? '',
       ),
       location: Location(
         latitude: location?.latitude ?? 0,
         longitude: location?.longitude ?? 0,
-        adresse: adresseController.text,
-        codePostal: int.tryParse(codePostalController.text) ?? 0,
-        pays: paysController.text,
-        ville: villeController.text,
+        adresse: adresseController.text.trim(),
+        codePostal: int.tryParse(codePostalController.text.trim()) ?? 0,
+        pays: paysController.text.trim(),
+        ville: villeController.text.trim(),
       ),
     );
+
     try {
       final token = await TokenStorage.getToken();
-      await PoolService().addPool(token.toString(), newPool).catchError((
-        error,
-      ) {
-        if (error is ApiException && error.statusCode == 401) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Session expirée. Veuillez vous reconnecter.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          TokenStorage.clearToken().then((_) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => LoginScreen()),
-            );
-          });
-        }
-      });
+      var response = await PoolService().addPool(token.toString(), newPool);
+
+      for (var product in _addedProducts) {
+        await ProductService().addProduct(token.toString(), product, idPool: response['data']['id'].toString());
+      }
 
       if (!mounted) return;
 
@@ -168,20 +610,45 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
         ),
       );
 
-      if (widget.onAddPool == null) {
+      if (widget.isFirstTime) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => DashboardScreen()),
         );
       } else {
-        widget.onAddPool!(newPool);
+        widget.onAddPool?.call(newPool);
         Navigator.pop(context);
       }
-    } catch (_) {
+    } on ApiException catch (error) {
+      if (!mounted) return;
+
+      if (error.statusCode == 401) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Session expirée. Veuillez vous reconnecter.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        await TokenStorage.clearToken();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => LoginScreen()),
+        );
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Échec de l\'ajout. Veuillez réessayer. $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Échec de l\'ajout. Veuillez réessayer.'),
+        SnackBar(
+          content: Text('Échec de l\'ajout. Veuillez réessayer. $error'),
           backgroundColor: Colors.red,
         ),
       );
@@ -192,8 +659,6 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
         });
       }
     }
-
-    // }
   }
 
   void _showStepError(String message) {
@@ -204,9 +669,9 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
 
   bool _validateCurrentStep({bool showError = false}) {
     if (_currentStep == 0) {
-      final length = double.tryParse(lengthController.text) ?? 0;
-      final width = double.tryParse(widthController.text) ?? 0;
-      final depth = double.tryParse(depthController.text) ?? 0;
+      final length = _parseDecimal(lengthController.text);
+      final width = _parseDecimal(widthController.text);
+      final depth = _parseDecimal(depthController.text);
 
       if (nameController.text.trim().isEmpty) {
         if (showError) _showStepError('Renseignez le nom de la piscine.');
@@ -265,22 +730,20 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final screenHeight = MediaQuery.of(context).size.height;
-    // TODO: implement build
+    final isWideScreen = MediaQuery.of(context).size.width >= 960;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ajouter une piscine'),
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
-        centerTitle: true,
         actions: [
           IconButton(
-            icon: CircleAvatar(
-              backgroundImage: AssetImage("assets/icon.png"),
+            icon: const CircleAvatar(
+              backgroundImage: AssetImage('assets/icon.png'),
               radius: 16,
             ),
             onPressed: () {
@@ -301,28 +764,193 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Column(
-          spacing: 20,
-          children: [
-            Column(
-              children: [
-                Image.asset('assets/logo.png', height: screenHeight / 12),
-                Text(
-                  'Ajouter votre piscine.',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: Colors.amber,
-                  ),
-                  textAlign: TextAlign.center,
-                  softWrap: true,
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1220),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isWideScreen ? 32 : 14,
+                  vertical: 14,
                 ),
-              ],
+                child: Column(
+                  children: [
+                    _buildSectionCard(
+                      title: 'Configuration de votre piscine',
+                      subtitle:
+                          'Renseignez les informations essentielles pour un suivi précis et personnalisé.',
+                      child: Row(
+                        children: [
+                          Image.asset('assets/logo.png', height: 48),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Complétez les 5 étapes pour finaliser votre espace.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Expanded(child: _buildStepper()),
+                  ],
+                ),
+              ),
             ),
-            Expanded(
-              child: Row(
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormPool() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionCard(
+              title: 'Informations générales',
+              child: Column(
                 children: [
-                  SizedBox(width: 20),
-                  Expanded(child: _buildStepper()),
-                  SizedBox(width: 20),
+                  _buildTextField(
+                    controller: nameController,
+                    label: 'Nom de la piscine',
+                    hint: 'Ex: Piscine familiale',
+                    icon: Icons.pool,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<TypePool>(
+                    initialValue: typePool,
+                    dropdownColor: _surfaceSoftColor,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _fieldDecoration(
+                      label: 'Type de piscine',
+                      icon: Icons.category,
+                    ),
+                    items: TypePool.values
+                        .map(
+                          (value) => DropdownMenuItem<TypePool>(
+                            value: value,
+                            child: Text(_formatEnumLabel(value.name)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        typePool = value ?? TypePool.beton;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildSectionCard(
+              title: 'Dimensions',
+              subtitle: 'Indiquez les mesures en mètres.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isCompact = constraints.maxWidth < 760;
+                      return Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _buildFormFieldShell(
+                            minWidth: isCompact ? constraints.maxWidth : 220,
+                            child: _buildTextField(
+                              controller: lengthController,
+                              label: 'Longueur',
+                              hint: 'Ex: 8',
+                              suffixText: 'm',
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[0-9.,]'),
+                                ),
+                              ],
+                              onChanged: (_) => _updateVolume(),
+                            ),
+                          ),
+                          _buildFormFieldShell(
+                            minWidth: isCompact ? constraints.maxWidth : 220,
+                            child: _buildTextField(
+                              controller: widthController,
+                              label: 'Largeur',
+                              hint: 'Ex: 4',
+                              suffixText: 'm',
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[0-9.,]'),
+                                ),
+                              ],
+                              onChanged: (_) => _updateVolume(),
+                            ),
+                          ),
+                          _buildFormFieldShell(
+                            minWidth: isCompact ? constraints.maxWidth : 220,
+                            child: _buildTextField(
+                              controller: depthController,
+                              label: 'Profondeur',
+                              hint: 'Ex: 1.5',
+                              suffixText: 'm',
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[0-9.,]'),
+                                ),
+                              ],
+                              onChanged: (_) => _updateVolume(),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF101010),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _borderColor),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calculate, color: Colors.amber),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Volume estimé: ${volumePool.toStringAsFixed(2)} m³',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -332,1409 +960,685 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     );
   }
 
-  Widget _buildFormPool() {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    void onChangedVolume() {
-      final length = double.tryParse(lengthController.text) ?? 0;
-      final width = double.tryParse(widthController.text) ?? 0;
-      final depth = double.tryParse(depthController.text) ?? 0;
-      setState(() {
-        volumePool = length * width * depth;
-      });
-    }
-
+  Widget _buildFormTraitement() {
     return SingleChildScrollView(
-      child: /* Padding(
-          //padding: EdgeInsets.all(8),
-          child: */ ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: MediaQuery.of(context).size.height / 2,
-        ),
-        child: IntrinsicHeight(
-          child: Form(
-            key: _formKey,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        children: [
+          _buildSectionCard(
+            title: 'Hydraulique',
             child: Column(
-              spacing: 30,
               children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    hintText: 'Nom de la piscine',
-                    hintStyle: TextStyle(
-                      color: const Color.fromARGB(255, 116, 116, 116),
-                      // fontSize: screenWidth * 0.03,
-                    ),
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(
-                      Icons.person,
-                      color: Colors.amber,
-                      // size: screenWidth * 0.03,
-                    ),
-                    labelText: 'Nom de la piscine',
-                    labelStyle: TextStyle(
-                      color: Colors.amber,
-                      // fontSize: screenWidth * 0.03,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.amber),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.amber, width: 2),
-                    ),
-                  ),
-                  style: TextStyle(
-                    color: Colors.white,
-                    // fontSize: screenWidth * 0.03,
-                  ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 760;
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _buildFormFieldShell(
+                          minWidth: isCompact ? constraints.maxWidth : 280,
+                          child: _buildTextField(
+                            controller: nbrSkimmersController,
+                            label: 'Nombre de skimmers',
+                            hint: 'Ex: 2',
+                            icon: Icons.water_damage_outlined,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                          ),
+                        ),
+                        _buildFormFieldShell(
+                          minWidth: isCompact ? constraints.maxWidth : 280,
+                          child: _buildTextField(
+                            controller: nbrRefoulementController,
+                            label: 'Buses de refoulement',
+                            hint: 'Ex: 3',
+                            icon: Icons.restart_alt,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-                // Text('Type piscine'),
-                // SizedBox(height: 10),
-                DropdownButtonFormField<TypePool>(
-                  initialValue: typePool,
-                  style: TextStyle(color: Colors.white),
-                  dropdownColor: const Color.fromARGB(128, 255, 214, 64),
-                  decoration: InputDecoration(
-                    labelText: "Type de piscine",
-                    border: OutlineInputBorder(),
-                    /* prefixIcon: Icon(Icons.person, color: Colors.amber, size: screenWidth * 0.03), */
-                    labelStyle: TextStyle(
-                      color: Colors.amber,
-                      // fontSize: screenWidth * 0.03,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.amber),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.amber, width: 2),
-                    ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<bool>(
+                  initialValue: priseBalai,
+                  dropdownColor: _surfaceSoftColor,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _fieldDecoration(
+                    label: 'Prise balai',
+                    icon: Icons.cleaning_services,
                   ),
-                  items: TypePool.values
+                  items: const [
+                    DropdownMenuItem(value: true, child: Text('Oui')),
+                    DropdownMenuItem(value: false, child: Text('Non')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      priseBalai = value ?? false;
+                    });
+                  },
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<BondeFond>(
+                  initialValue: bondeFond,
+                  dropdownColor: _surfaceSoftColor,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _fieldDecoration(
+                    label: 'Bonde de fond',
+                    icon: Icons.downhill_skiing,
+                  ),
+                  items: BondeFond.values
                       .map(
-                        (type) => DropdownMenuItem<TypePool>(
-                          value: type,
-                          child: Text(type.toString().split('.').last),
+                        (value) => DropdownMenuItem<BondeFond>(
+                          value: value,
+                          child: Text(
+                            value == BondeFond.horizontale
+                                ? 'Horizontale'
+                                : value == BondeFond.verticale
+                                ? 'Verticale'
+                                : 'Aucune',
+                          ),
                         ),
                       )
                       .toList(),
                   onChanged: (value) {
                     setState(() {
-                      typePool = value ?? TypePool.beton;
+                      bondeFond = value ?? BondeFond.non;
                     });
                   },
-                  validator: (value) {
-                    if (value == null) {
-                      return "Veuillez sélectionner une option";
-                    }
-                    return null;
-                  },
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: TextField(
-                          controller: lengthController,
-                          decoration: InputDecoration(
-                            hintText: 'Longueur (m)',
-                            labelText: 'Longueur (m)',
-                            labelStyle: TextStyle(
-                              color: const Color.fromARGB(255, 116, 116, 116),
-                              fontSize: screenWidth * 0.03,
-                            ),
-                            hintStyle: TextStyle(
-                              color: const Color.fromARGB(255, 116, 116, 116),
-                              fontSize: screenWidth * 0.03,
-                            ),
-                          ),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: screenWidth * 0.03,
-                          ),
-                          onChanged: (value) => onChangedVolume(),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: TextField(
-                          controller: widthController,
-                          decoration: InputDecoration(
-                            hintText: 'Largeur (m)',
-                            labelText: 'Largeur (m)',
-                            labelStyle: TextStyle(
-                              color: const Color.fromARGB(255, 116, 116, 116),
-                              fontSize: screenWidth * 0.03,
-                            ),
-                            hintStyle: TextStyle(
-                              color: const Color.fromARGB(255, 116, 116, 116),
-                              fontSize: screenWidth * 0.03,
-                            ),
-                          ),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: screenWidth * 0.03,
-                          ),
-                          onChanged: (value) => onChangedVolume(),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: TextField(
-                          controller: depthController,
-                          decoration: InputDecoration(
-                            hintText: 'Profondeur (m)',
-                            labelText: 'Profondeur (m)',
-                            labelStyle: TextStyle(
-                              color: const Color.fromARGB(255, 116, 116, 116),
-                              fontSize: screenWidth * 0.03,
-                            ),
-                            hintStyle: TextStyle(
-                              color: const Color.fromARGB(255, 116, 116, 116),
-                              fontSize: screenWidth * 0.03,
-                            ),
-                          ),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: screenWidth * 0.03,
-                          ),
-                          onChanged: (value) => onChangedVolume(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Slider(
-                        value: volumePool ?? 0,
-                        min: 0,
-                        max: 1000,
-                        divisions: 10,
-                        label: volumePool?.toString() ?? '0',
-                        activeColor: Colors.blue,
-                        inactiveColor: Colors.grey,
-                        onChanged: (value) {
-                          // setState(() {
-                          //   volumePool = value;
-                          // });
-                        },
-                      ),
-                    ),
-
-                    Text('${volumePool.toString()} m3'),
-                    SizedBox(width: 20),
-                  ],
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFormTraitement() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    return SingleChildScrollView(
-      child: /* Padding(
-          //padding: EdgeInsets.all(8),
-          child: */ ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: MediaQuery.of(context).size.height / 2,
-        ),
-        child: IntrinsicHeight(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            spacing: 50,
-            children: [
-              IntrinsicHeight(
-                child: Column(
-                  spacing: 30,
-                  children: [
-                    Column(
-                      spacing: 20,
-                      children: [
-                        Text(
-                          'Hydraulique',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.05,
-                            decoration: TextDecoration.underline,
-                          ),
+          const SizedBox(height: 12),
+          _buildSectionCard(
+            title: 'Filtration',
+            child: Column(
+              children: [
+                DropdownButtonFormField<Pompe>(
+                  initialValue: pompe,
+                  dropdownColor: _surfaceSoftColor,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _fieldDecoration(
+                    label: 'Type de pompe',
+                    icon: Icons.tune,
+                  ),
+                  items: Pompe.values
+                      .map(
+                        (value) => DropdownMenuItem<Pompe>(
+                          value: value,
+                          child: Text(_formatEnumLabel(value.name)),
                         ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 10),
-                                child: TextField(
-                                  controller: nbrSkimmersController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Nbr de skimmers',
-                                    labelText: 'Nbr de skimmers',
-                                    labelStyle: TextStyle(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        116,
-                                        116,
-                                        116,
-                                      ),
-                                      fontSize: screenWidth * 0.03,
-                                    ),
-                                    hintStyle: TextStyle(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        116,
-                                        116,
-                                        116,
-                                      ),
-                                      fontSize: screenWidth * 0.03,
-                                    ),
-                                  ),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: screenWidth * 0.03,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 10),
-                                child: TextField(
-                                  controller: nbrRefoulementController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Nbr de refoulement',
-                                    labelText: 'Nbr de refoulement',
-                                    labelStyle: TextStyle(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        116,
-                                        116,
-                                        116,
-                                      ),
-                                      fontSize: screenWidth * 0.03,
-                                    ),
-                                    hintStyle: TextStyle(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        116,
-                                        116,
-                                        116,
-                                      ),
-                                      fontSize: screenWidth * 0.03,
-                                    ),
-                                  ),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: screenWidth * 0.03,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          spacing: 20,
-                          children: [
-                            /* Expanded(
-                              child:  */
-                            DropdownButtonFormField<bool>(
-                              initialValue: false,
-                              style: TextStyle(color: Colors.white),
-                              dropdownColor: const Color.fromARGB(
-                                128,
-                                255,
-                                214,
-                                64,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: "Prise balai",
-                                border: OutlineInputBorder(),
-                                /* prefixIcon: Icon(Icons.person, color: Colors.amber, size: screenWidth * 0.03), */
-                                labelStyle: TextStyle(
-                                  color: Colors.amber,
-                                  // fontSize: screenWidth * 0.03,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.amber),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: Colors.amber,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                              items: [true, false]
-                                  .map(
-                                    (value) => DropdownMenuItem<bool>(
-                                      value: value,
-                                      child: Text(value ? "Oui" : "Non"),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  priseBalai = value ?? false;
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null) {
-                                  return "Veuillez sélectionner une option";
-                                }
-                                return null;
-                              },
-                              // ),
-                            ),
-                            /* Expanded(
-                              child:  */
-                            DropdownButtonFormField<BondeFond>(
-                              initialValue: BondeFond.non,
-                              style: TextStyle(color: Colors.white),
-                              dropdownColor: const Color.fromARGB(
-                                128,
-                                255,
-                                214,
-                                64,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: "Bonde de fond",
-                                border: OutlineInputBorder(),
-                                /* prefixIcon: Icon(Icons.person, color: Colors.amber, size: screenWidth * 0.03), */
-                                labelStyle: TextStyle(
-                                  color: Colors.amber,
-                                  // fontSize: screenWidth * 0.03,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.amber),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: Colors.amber,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                              items: BondeFond.values
-                                  .map(
-                                    (value) => DropdownMenuItem<BondeFond>(
-                                      value: value,
-                                      child: Text(
-                                        value == BondeFond.horizontale
-                                            ? "Horizontale"
-                                            : value == BondeFond.verticale
-                                            ? "Verticale"
-                                            : "Non",
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  bondeFond = value ?? BondeFond.non;
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null) {
-                                  return "Veuillez sélectionner une option";
-                                }
-                                return null;
-                              },
-                            ),
-                            // ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    Column(
-                      children: [
-                        Text(
-                          'Filtration',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.05,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<Pompe>(
-                                initialValue: Pompe.standard,
-                                style: TextStyle(color: Colors.white),
-                                dropdownColor: const Color.fromARGB(
-                                  128,
-                                  255,
-                                  214,
-                                  64,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: "Pompe",
-                                  border: OutlineInputBorder(),
-                                  /* prefixIcon: Icon(Icons.person, color: Colors.amber, size: screenWidth * 0.03), */
-                                  labelStyle: TextStyle(
-                                    color: Colors.amber,
-                                    // fontSize: screenWidth * 0.03,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.amber),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.amber,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                items: Pompe.values
-                                    .map(
-                                      (value) => DropdownMenuItem<Pompe>(
-                                        value: value,
-                                        child: Text(
-                                          value.toString().split('.').last,
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    pompe = value ?? Pompe.standard;
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null) {
-                                    return "Veuillez sélectionner une option";
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 10),
-                                child: TextField(
-                                  controller: puissancePompeController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Puissance de Pompe',
-                                    labelText: 'Puissance de Pompe',
-                                    labelStyle: TextStyle(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        116,
-                                        116,
-                                        116,
-                                      ),
-                                      fontSize: screenWidth * 0.03,
-                                    ),
-                                    hintStyle: TextStyle(
-                                      color: const Color.fromARGB(
-                                        255,
-                                        116,
-                                        116,
-                                        116,
-                                      ),
-                                      fontSize: screenWidth * 0.03,
-                                    ),
-                                  ),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: screenWidth * 0.03,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: DropdownButtonFormField<TypeFiltre>(
-                                initialValue: TypeFiltre.sable,
-                                style: TextStyle(color: Colors.white),
-                                dropdownColor: const Color.fromARGB(
-                                  128,
-                                  255,
-                                  214,
-                                  64,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: "Type de filtre",
-                                  border: OutlineInputBorder(),
-                                  /* prefixIcon: Icon(Icons.person, color: Colors.amber, size: screenWidth * 0.03), */
-                                  labelStyle: TextStyle(
-                                    color: Colors.amber,
-                                    // fontSize: screenWidth * 0.03,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.amber),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.amber,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                items: TypeFiltre.values
-                                    .map(
-                                      (value) => DropdownMenuItem<TypeFiltre>(
-                                        value: value,
-                                        child: Text(
-                                          value.toString().split('.').last,
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    typeFiltre = value ?? TypeFiltre.sable;
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null) {
-                                    return "Veuillez sélectionner une option";
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    Text(
-                      'Traitement',
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.05,
-                        decoration: TextDecoration.overline,
-                      ),
-                    ),
-                    SizedBox(
-                      width: screenWidth,
-                      child: Flex(
-                        direction: Axis.horizontal,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        spacing: 10,
-                        children: Traitement.values
-                            .map(
-                              (item) => Expanded(
-                                child: ElevatedButton(
-                                  style: ButtonStyle(
-                                    backgroundColor: WidgetStateProperty.all(
-                                      traitementChecked.contains(item)
-                                          ? Colors.amber
-                                          : Colors.transparent,
-                                    ),
-                                    foregroundColor: WidgetStateProperty.all(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      if (!traitementChecked.contains(item)) {
-                                        traitementChecked.add(item);
-                                      } else {
-                                        traitementChecked.remove(item);
-                                      }
-                                    });
-                                  },
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: traitementChecked.contains(item)
-                                          ? Colors.amber
-                                          : Colors.transparent,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            item.name,
-                                            style: TextStyle(
-                                              fontSize: screenWidth * 0.03,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      pompe = value ?? Pompe.standard;
+                    });
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildTextField(
+                  controller: puissancePompeController,
+                  label: 'Puissance pompe',
+                  hint: 'Ex: 1.5',
+                  suffixText: 'CV',
+                  icon: Icons.bolt,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                   ],
                 ),
-              ),
-              SizedBox(height: 20),
-            ],
+                const SizedBox(height: 10),
+                DropdownButtonFormField<TypeFiltre>(
+                  initialValue: typeFiltre,
+                  dropdownColor: _surfaceSoftColor,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _fieldDecoration(
+                    label: 'Type de filtre',
+                    icon: Icons.filter_alt,
+                  ),
+                  items: TypeFiltre.values
+                      .map(
+                        (value) => DropdownMenuItem<TypeFiltre>(
+                          value: value,
+                          child: Text(_formatEnumLabel(value.name)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      typeFiltre = value ?? TypeFiltre.sable;
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFormPhoto() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        minWidth: screenWidth,
-        maxHeight: screenHeight / 2,
-      ),
-      child: GridView.count(
-        crossAxisCount: 2,
-        children: [
-          _buildCardPhoto('Vue d\'ensemble', image_ensemble),
-          _buildCardPhoto('Eau de la piscine', image_eau),
-          _buildCardPhoto('Local technique', image_local),
-          _buildCardPhoto('Equipements', image_equipements),
+          const SizedBox(height: 12),
+          _buildSectionCard(
+            title: 'Traitements utilisés',
+            subtitle: 'Sélectionnez un ou plusieurs traitements.',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: Traitement.values.map((item) {
+                final selected = traitementChecked.contains(item);
+                return FilterChip(
+                  label: Text(_formatEnumLabel(item.name)),
+                  selected: selected,
+                  selectedColor: Colors.amber,
+                  checkmarkColor: Colors.black,
+                  labelStyle: TextStyle(
+                    color: selected ? Colors.black : Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  side: const BorderSide(color: _borderColor),
+                  onSelected: (_) {
+                    setState(() {
+                      if (selected) {
+                        traitementChecked.remove(item);
+                      } else {
+                        traitementChecked.add(item);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCardPhoto(String title, File? image) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    return Padding(
-      padding: EdgeInsets.all(8),
-      //padding: EdgeInsets.all(8),
-      child: ElevatedButton(
-        /* margin: EdgeInsets.all(8),
-      padding: EdgeInsets.all(0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.amber),
-        borderRadius: BorderRadius.all(Radius.circular(20)),
-      ), */
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          padding: EdgeInsets.all(0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: Colors.amber),
-          ),
-        ),
-        onPressed: () {
-          _takePhoto(title);
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: screenWidth * 0.03,
-                color: Colors.white,
+  Widget _buildFormPhoto() {
+    final photos = [
+      {'title': 'Vue d\'ensemble', 'image': imageEnsemble},
+      {'title': 'Eau de la piscine', 'image': imageEau},
+      {'title': 'Local technique', 'image': imageLocal},
+      {'title': 'Equipements', 'image': imageEquipements},
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: _buildSectionCard(
+        title: 'Photos de la piscine',
+        subtitle: 'Ajoutez des photos nettes pour faciliter le diagnostic.',
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth < 700 ? 1 : 2;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.55,
               ),
-            ),
-            Stack(
-              children: [
-                Column(
-                  children: [
-                    Container(
-                      margin: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.amber),
-                        borderRadius: BorderRadius.all(Radius.circular(20)),
+              itemCount: photos.length,
+              itemBuilder: (context, index) {
+                final item = photos[index];
+                return _buildCardPhoto(
+                  item['title'] as String,
+                  item['image'] as File?,
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardPhoto(String title, File? image) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _takePhoto(title),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _surfaceSoftColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(13),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      image != null
+                          ? Image.file(image, fit: BoxFit.cover)
+                          : Image.asset(
+                              'assets/piscine.png',
+                              fit: BoxFit.cover,
+                            ),
+                      Container(color: Colors.black.withValues(alpha: 0.35)),
+                      const Center(
+                        child: Icon(
+                          Icons.photo_camera,
+                          color: Colors.amber,
+                          size: 34,
+                        ),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: image.toString() != 'null'
-                            ? Image.file(
-                                image!,
-                                fit: BoxFit.cover,
-                                height: screenHeight * 0.08,
-                                width: screenWidth * 0.5,
-                              )
-                            : Image.asset(
-                                'assets/piscine.png',
-                                fit: BoxFit.cover,
-                                height: screenHeight * 0.08,
-                                width: screenWidth * 0.5,
-                              ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     Text(
-                      'Ajouter une photo',
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.03,
-                        color: Colors.white,
-                      ),
+                      image != null ? 'Modifiée' : 'Ajouter',
+                      style: const TextStyle(color: Colors.amber, fontSize: 12),
                     ),
                   ],
                 ),
-
-                Align(
-                  alignment: Alignment(0, 1), // relatif
-                  child: Container(
-                    padding: EdgeInsets.all(5),
-                    // color: Colors.black.withOpacity(0.5),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(50)),
-                      color: const Color.fromARGB(216, 255, 211, 50),
-                    ),
-                    child: Icon(
-                      Icons.photo_camera,
-                      color: const Color.fromARGB(255, 154, 116, 0),
-                      size: screenWidth * 0.07,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildFormLocation() {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    bool isLoadingLocation = false;
-    bool locationChecked = false;
-
-    void loadLocation() async {
-      try {
-        setState(() {
-          isLoadingLocation = true;
-        });
-        Map<String, String?> address = await getFullAddress();
-
-        if (address.isNotEmpty) {
-          setState(() {
-            isLoadingLocation = false;
-            locationChecked = true;
-            location = Location(
-              latitude: double.parse(address['latitude'] ?? '0'),
-              longitude: double.parse(address['longitude'] ?? '0'),
-              adresse: address['street'] ?? '',
-              codePostal: int.parse(address['postalCode'] ?? '0'),
-              ville: address['locality'] ?? '',
-              pays: address['country'] ?? '',
-            );
-          });
-        }
-
-        adresseController.text = address['street'] ?? '';
-        codePostalController.text = address['postalCode'] ?? '';
-        villeController.text = address['locality'] ?? '';
-        paysController.text = address['country'] ?? '';
-      } catch (e) {
-        print(e);
-      }
-    }
-
-    void listenerInput() {
-      if (adresseController.text.isNotEmpty &&
-          codePostalController.text.isNotEmpty &&
-          villeController.text.isNotEmpty &&
-          paysController.text.isNotEmpty) {
-        setState(() {
-          locationChecked = true;
-        });
-      } else {
-        setState(() {
-          locationChecked = false;
-        });
-      }
-    }
-
-    Widget buildTextField(
-      IconData icon,
-      String title,
-      TextEditingController? controller, {
-      bool obscure = false,
-      String? Function(String?)? validator,
-    }) {
-      return /* Padding(
-      padding: EdgeInsets.symmetric(horizontal: 60, vertical: 8),
-      child: */ TextFormField(
-        controller: controller,
-        obscureText: obscure,
-        style: TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.amber),
-          labelText: title,
-          labelStyle: TextStyle(color: Colors.amber),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.amber),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.amber, width: 2),
-          ),
-        ),
-        onChanged: (value) => listenerInput(),
-        validator: validator,
-        /* validator: (String? value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter some text';
-              }
-              return null;
-            }, */
-        // ),
-      );
-    }
-
-    return Form(
-      key: _formKey2,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 20,
-        children: [
-          buildTextField(Icons.home, 'Adresse', adresseController),
-          buildTextField(Icons.post_add, 'Code postal', codePostalController),
-          buildTextField(Icons.location_city, 'Ville', villeController),
-          buildTextField(Icons.public, 'Pays', paysController),
-          /* Padding(
-              // padding: EdgeInsets.symmetric(horizontal: 60, vertical: 8),
-              child: */
-          ElevatedButton(
-            onPressed: loadLocation,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(5)),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Form(
+        key: _formKey2,
+        child: _buildSectionCard(
+          title: 'Localisation',
+          subtitle: 'Vous pouvez saisir manuellement ou utiliser le GPS.',
+          child: Column(
+            children: [
+              _buildTextField(
+                controller: adresseController,
+                label: 'Adresse',
+                icon: Icons.home,
+                onChanged: (_) => _syncLocationCompletion(),
               ),
-              side: BorderSide(color: Colors.amber, width: 1),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Icon(Icons.gps_fixed, color: Colors.white),
-                // SizedBox(width: 10),
-                Text(
-                  'Utiliser ma localisation GPS',
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.03,
-                    color: Colors.white,
+              const SizedBox(height: 10),
+              _buildTextField(
+                controller: codePostalController,
+                label: 'Code postal',
+                icon: Icons.markunread_mailbox,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (_) => _syncLocationCompletion(),
+              ),
+              const SizedBox(height: 10),
+              _buildTextField(
+                controller: villeController,
+                label: 'Ville',
+                icon: Icons.location_city,
+                onChanged: (_) => _syncLocationCompletion(),
+              ),
+              const SizedBox(height: 10),
+              _buildTextField(
+                controller: paysController,
+                label: 'Pays',
+                icon: Icons.public,
+                onChanged: (_) => _syncLocationCompletion(),
+                textInputAction: TextInputAction.done,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isLoadingLocation ? null : _loadLocation,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.amber),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: _isLoadingLocation
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.amber,
+                          ),
+                        )
+                      : const Icon(Icons.gps_fixed),
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Utiliser ma localisation GPS'),
+                      const SizedBox(width: 8),
+                      if (_locationChecked && !_isLoadingLocation)
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 18,
+                        ),
+                    ],
                   ),
                 ),
-                isLoadingLocation
-                    ? CircularProgressIndicator(
-                        color: Colors.amber,
-                        strokeWidth: 1,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.amber),
-                      )
-                    : locationChecked
-                    ? Icon(
-                        Icons.check_circle_sharp,
-                        color: Colors.green[600],
-                        size: screenWidth * 0.05,
-                      )
-                    : SizedBox.shrink(),
-              ],
-            ),
+              ),
+            ],
           ),
-          // ),
-
-          /*                     _buildTextField(
-                            Icons.gps_fixed,
-                            'Utiliser ma localisation GPS',
-                            paysController,
-                          ), */
-          SizedBox(height: 20),
-        ],
+        ),
       ),
     );
-    // ),
   }
 
   Widget buildAddProduct() {
-    final theme = Theme.of(context);
-
-    final _nameController = TextEditingController();
-    final _brandController = TextEditingController();
-    final _quantityController = TextEditingController();
-    final _unitController = TextEditingController();
-
-    final ImagePicker _picker = ImagePicker();
-
-    Categorie? _selectedCategory;
-
-    _AddProduct() {
-      print("AddProduct constructor called");
-      print("Name product: ${_nameController.text}");
-      print("Brand product: ${_brandController.text}");
-      print("Selected category: $_selectedCategory");
-
-      final quantity = int.tryParse(_quantityController.text.trim());
-      final unit = _unitController.text.trim();
-
-      if (_nameController.text.isEmpty ||
-          _brandController.text.isEmpty ||
-          _selectedCategory == null ||
-          quantity == null ||
-          quantity < 0 ||
-          unit.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Veuillez remplir tous les champs obligatoires."),
-          ),
-        );
-        return;
-      }
-
-      var product = ProductModel(
-        categorie: _selectedCategory!,
-        marque: _brandController.text,
-        name: _nameController.text,
-        quantity: quantity,
-        unit: unit,
-        photoFace: photoFace?.path,
-        photoNoticeDosage: photoNoticeDosage?.path,
-      );
-
-      TokenStorage.getToken().then((tokenValue) {
-        ProductService()
-            .addProduct(tokenValue!, product)
-            .then((response) {
-              if (response['success'] == true) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Produit ajouté avec succès !")),
-                );
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Erreur : ${response['message']}")),
-                );
-              }
-            })
-            .catchError((error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Erreur de connexion : $error")),
-              );
-            });
-      });
-    }
-
-    Future<void> _takePhotoProd(String imageType) async {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-      if (photo != null) {
-        setState(() {
-          switch (imageType) {
-            case 'Face avant':
-              photoFace = File(photo.path);
-              break;
-            case 'Étiquette':
-              photoNoticeDosage = File(photo.path);
-              break;
-          }
-        });
-      }
-    }
-
-    Widget _buildSectionCard({required String title, required Widget child}) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.amber.withOpacity(0.22)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
-      );
-    }
-
-    Widget _buildPhotoButton({
-      required IconData icon,
-      required String label,
-      required VoidCallback onPressed,
-    }) {
-      return SizedBox(
-        height: 48,
-        child: ElevatedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon, color: Colors.black),
-          label: Text(label),
-        ),
-      );
-    }
-
-    Widget _buildInputLabel(ThemeData theme, String text) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text, style: theme.textTheme.bodyLarge),
-      );
-    }
-
-    InputDecoration _inputDecoration(String hint) {
-      return InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white54),
-        filled: true,
-        fillColor: const Color(0xFF222222),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white24),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.amber),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-      );
-    }
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF050505), Color(0xFF111111)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              /* Text(
-                'Ajout d\'un Produit',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: Colors.amber,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        children: [
+          _buildSectionCard(
+            title: 'Informations produit',
+            subtitle: 'Ajout facultatif pour suivre vos stocks.',
+            child: Column(
+              children: [
+                _buildTextField(
+                  controller: _productNameController,
+                  label: 'Nom du produit',
+                  hint: 'Ex: Chlore choc 5kg',
+                  icon: Icons.inventory_2,
                 ),
-                textAlign: TextAlign.center,
-              ),
-  
-              const SizedBox(height: 16), */
-
-              /* _buildSectionCard(
-                title: 'Scanner automatiquement',
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.document_scanner,
-                      color: Colors.amber,
-                      size: 30,
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.photo_camera,
-                          color: Colors.black,
+                const SizedBox(height: 10),
+                _buildTextField(
+                  controller: _productBrandController,
+                  label: 'Marque',
+                  hint: 'Ex: Bayrol',
+                  icon: Icons.sell,
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<Categorie>(
+                  initialValue: _selectedCategory,
+                  dropdownColor: _surfaceSoftColor,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _fieldDecoration(
+                    label: 'Catégorie',
+                    icon: Icons.category,
+                  ),
+                  items: Categorie.values
+                      .map(
+                        (category) => DropdownMenuItem<Categorie>(
+                          value: category,
+                          child: Text(category.label),
                         ),
-                        label: const Text('Photographier l\'étiquette'),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sunny remplit automatiquement les dosages et la composition.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white70,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCategory = value;
+                    });
+                  },
                 ),
-              ),
-
-              const SizedBox(height: 14), */
-
-              _buildSectionCard(
-                title: 'Informations produit',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInputLabel(theme, 'Nom du produit'),
-                    TextField(
-                      controller: _nameController,
-                      style: const TextStyle(color: Colors.white),
-                      textInputAction: TextInputAction.next,
-                      decoration: _inputDecoration('Ex: Chlore choc 5kg'),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildInputLabel(theme, 'Marque'),
-                    TextField(
-                      controller: _brandController,
-                      style: const TextStyle(color: Colors.white),
-                      textInputAction: TextInputAction.next,
-                      decoration: _inputDecoration('Ex: Bayrol'),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildInputLabel(theme, 'Catégorie'),
-                    DropdownButtonFormField<Categorie>(
-                      value: _selectedCategory,
-                      dropdownColor: const Color(0xFF1A1A1A),
-                      iconEnabledColor: Colors.amber,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration(
-                        'Sélectionnez une catégorie',
-                      ),
-                      items: Categorie.values
-                          .map(
-                            (category) => DropdownMenuItem(
-                              value: category,
-                              child: Text(category.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCategory = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    _buildInputLabel(theme, 'Quantité'),
-                    TextField(
-                      controller: _quantityController,
-                      style: const TextStyle(color: Colors.white),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      textInputAction: TextInputAction.next,
-                      decoration: _inputDecoration('Ex: 5'),
-                    ),
-                    const SizedBox(height: 10),
-
-                    _buildInputLabel(theme, 'Unité'),
-                    TextField(
-                      controller: _unitController,
-                      style: const TextStyle(color: Colors.white),
-                      textInputAction: TextInputAction.done,
-                      decoration: _inputDecoration('Ex: kg, g, L'),
-                    ),
-                    const SizedBox(height: 10),
-
-                    //_buildInputLabel(theme, 'Concentration'),
-                    /* TextField(
-                        controller: _concentrationController,
-                        style: const TextStyle(color: Colors.white),
-                        textInputAction: TextInputAction.done,
-                        decoration: _inputDecoration('Ex: 56%'),
-                      ), */
-                  ],
+                const SizedBox(height: 10),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 760;
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _buildFormFieldShell(
+                          minWidth: isCompact ? constraints.maxWidth : 260,
+                          child: _buildTextField(
+                            controller: _productQuantityController,
+                            label: 'Quantité',
+                            hint: 'Ex: 5',
+                            icon: Icons.numbers,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                          ),
+                        ),
+                        _buildFormFieldShell(
+                          minWidth: isCompact ? constraints.maxWidth : 260,
+                          child: _buildTextField(
+                            controller: _productUnitController,
+                            label: 'Unité',
+                            hint: 'Ex: kg, g, L',
+                            icon: Icons.straighten,
+                            textInputAction: TextInputAction.done,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-              ),
-
-              _buildSectionCard(
-                title: 'Photos du produit',
-                child: Row(
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildSectionCard(
+            title: 'Photos produit',
+            child: Column(
+              children: [
+                Row(
                   children: [
                     Expanded(
-                      child: _buildPhotoButton(
-                        icon: Icons.add_a_photo,
-                        label: 'Face avant',
+                      child: OutlinedButton.icon(
                         onPressed: () => _takePhotoProd('Face avant'),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.amber),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        icon: const Icon(Icons.add_a_photo),
+                        label: Text(
+                          photoFace == null ? 'Face avant' : 'Face capturée',
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: _buildPhotoButton(
-                        icon: Icons.text_snippet,
-                        label: 'Étiquette',
+                      child: OutlinedButton.icon(
                         onPressed: () => _takePhotoProd('Étiquette'),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.amber),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        icon: const Icon(Icons.text_snippet),
+                        label: Text(
+                          photoNoticeDosage == null
+                              ? 'Étiquette'
+                              : 'Étiquette capturée',
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-
-              const SizedBox(height: 14),
-
-              const SizedBox(height: 18),
-
-              /* SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _AddProduct,
-                  child: Text(
-                    'Ajouter ce produit',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white38),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    'Annuler',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ), */
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isAddingProduct ? null : _addProduct,
+                    icon: _isAddingProduct
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.black,
+                            ),
+                          )
+                        : const Icon(Icons.save),
+                    label: Text(
+                      _isAddingProduct
+                          ? 'Ajout en cours...'
+                          : 'Ajouter ce produit',
+                    ),
+                  ),
+                ),
+          const SizedBox(height: 12),
+          _buildSectionCard(
+            title: 'Produits ajoutés (${_addedProducts.length})',
+            subtitle: 'Vérifiez votre liste avant de finaliser la piscine.',
+            child: _buildAddedProductsList(),
+          ),
+        ],
       ),
     );
   }
 
+  Widget _buildStepContent() {
+    return switch (_currentStep) {
+      0 => _buildFormPool(),
+      1 => _buildFormTraitement(),
+      2 => _buildFormPhoto(),
+      3 => _buildFormLocation(),
+      4 => buildAddProduct(),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
   Widget _buildStepper() {
     final List<String> steps = [
-      "Piscine",
-      "Traitements",
-      "Photos",
-      "Localisation",
-      "Produit",
+      'Piscine',
+      'Traitements',
+      'Photos',
+      'Localisation',
+      'Produit',
     ];
+    final isLastStep = _currentStep == steps.length - 1;
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Étape ${_currentStep + 1} / ${steps.length} • ${steps[_currentStep]}',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontWeight: FontWeight.w600,
+    return Container(
+      decoration: BoxDecoration(
+        color: _surfaceColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _borderColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Column(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Étape ${_currentStep + 1} / ${steps.length} • ${steps[_currentStep]}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: (_currentStep + 1) / steps.length,
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(10),
-            backgroundColor: Colors.white12,
-            color: Colors.amber,
-          ),
-          const SizedBox(height: 16),
-          CustomStepper(
-            currentStep: _currentStep,
-            steps: steps,
-            onStepTapped: (index) {
-              if (index <= _currentStep) {
-                setState(() => _currentStep = index);
-                return;
-              }
-              if (_validateCurrentStep(showError: true)) {
-                setState(() => _currentStep = index);
-              }
-            },
-          ),
-
-          const SizedBox(height: 30),
-
-          Expanded(
-            child: Center(
-              child: switch (_currentStep) {
-                0 => _buildFormPool(),
-                1 => _buildFormTraitement(),
-                2 => _buildFormPhoto(),
-                3 => _buildFormLocation(),
-                4 => buildAddProduct(),
-                _ => Container(),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: (_currentStep + 1) / steps.length,
+                minHeight: 7,
+                backgroundColor: Colors.white12,
+                color: Colors.amber,
+              ),
+            ),
+            const SizedBox(height: 16),
+            CustomStepper(
+              currentStep: _currentStep,
+              steps: steps,
+              onStepTapped: (index) {
+                if (index <= _currentStep) {
+                  setState(() => _currentStep = index);
+                  return;
+                }
+                if (_validateCurrentStep(showError: true)) {
+                  setState(() => _currentStep = index);
+                }
               },
             ),
-          ),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _currentStep > 0
-                  ? ElevatedButton(
+            const SizedBox(height: 18),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: KeyedSubtree(
+                  key: ValueKey(_currentStep),
+                  child: _buildStepContent(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (_currentStep > 0) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
                       onPressed: _prevStep,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        /* padding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 16), */
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(5)),
-                        ),
-                        side: BorderSide(color: Colors.amber, width: 1),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.amber),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: Text(
-                        "Retour",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    )
-                  : SizedBox.shrink(),
-              _currentStep < steps.length - 1
-                  ? ElevatedButton(
-                      onPressed: _nextStep,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        /* padding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 16), */
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(5)),
-                        ),
-                        side: BorderSide(color: Colors.amber, width: 1),
-                      ),
-                      child: Text(
-                        "Suivant",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    )
-                  : ElevatedButton(
-                      onPressed: _isSubmitting ? null : _submitPool,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber,
-                        /* padding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 16), */
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(5)),
-                        ),
-                        side: BorderSide(color: Colors.amber, width: 1),
-                      ),
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.black,
-                              ),
-                            )
-                          : const Text(
-                              "Ajouter",
-                              style: TextStyle(color: Colors.white),
-                            ),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Retour'),
                     ),
-            ],
-          ),
-        ],
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: isLastStep
+                        ? (_isSubmitting ? null : _submitPool)
+                        : _nextStep,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    icon: isLastStep
+                        ? (_isSubmitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.black,
+                                  ),
+                                )
+                              : const Icon(Icons.check_circle))
+                        : const Icon(Icons.arrow_forward),
+                    label: Text(
+                      isLastStep
+                          ? (_isSubmitting ? 'Ajout...' : 'Ajouter la piscine')
+                          : 'Suivant',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

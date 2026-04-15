@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sunnypool_app/screens/add_piscine_screen.dart';
 import '../services/auth_service.dart';
 import '../utils/token_storage.dart';
 import 'login_screen.dart';
@@ -32,7 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (token != null) {
           await TokenStorage.saveToken(token);
           Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => UserlocationScreen()));
+              context, MaterialPageRoute(builder: (_) => AddPiscineScreen(isFirstTime: true)));
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(

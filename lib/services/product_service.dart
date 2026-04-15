@@ -43,9 +43,10 @@ class ProductService {
   Future<Map<String, dynamic>> addProduct(
     String token,
     ProductModel product,
+    {String? idPool}
   ) async {
     print(token);
-    String idPool = await PoolIdStorage.getPoolId() as String;
+    idPool ??= await PoolIdStorage.getPoolId() as String;
     final photoFaceBase64 = await _toBase64IfFilePath(product.photoFace);
     final photoNoticeBase64 = await _toBase64IfFilePath(
       product.photoNoticeDosage,
