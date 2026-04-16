@@ -59,7 +59,7 @@ class OnbordingScreen extends StatelessWidget {
                     border: Border.all(color: Colors.amber.withOpacity(0.2)),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text('☀️ Analyse de l\'eau', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 8),

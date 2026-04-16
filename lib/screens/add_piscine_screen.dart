@@ -197,7 +197,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
         border: Border.all(color: _borderColor),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           /* Text(
             title,
@@ -1131,6 +1131,8 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              alignment: WrapAlignment.center,
               children: Traitement.values.map((item) {
                 final selected = traitementChecked.contains(item);
                 return FilterChip(

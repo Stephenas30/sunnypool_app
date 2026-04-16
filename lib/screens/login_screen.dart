@@ -54,6 +54,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
     final theme = Theme.of(context);
     return Scaffold(
       body: Container(
@@ -119,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           MaterialPageRoute(builder: (_) => RegisterScreen()),
                         );
                       },
-                      child: const Text("Pas encore de compte ? Créer un compte"),
+                      child: Text("Pas encore de compte ? Créer un compte", textAlign: TextAlign.center, style: TextStyle(fontSize: screenWidth * 0.03),),
                     ),
                     Text(
                       "Mot de passe oublié ?",
