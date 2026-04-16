@@ -117,6 +117,9 @@ class _MypiscineScreen extends State<MypiscineScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -146,7 +149,7 @@ class _MypiscineScreen extends State<MypiscineScreen> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                   decoration: BoxDecoration(
                     color: const Color(0xFF121212),
                     borderRadius: BorderRadius.circular(24),
@@ -154,20 +157,23 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                   ),
                   child: Column(
                     children: [
-                      Image.asset('assets/logo.png', height: 120),
-                      const SizedBox(height: 14),
+                      Image.asset('assets/logo.png', height: screenHeight * 0.1),
+                      const SizedBox(height: 8),
                       Text(
                         'Liste de vos piscines',
                         style: theme.textTheme.headlineSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          fontSize: screenWidth * 0.05
                         ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Naviguez facilement entre vos piscines et accédez aux détails de chacune.',
-                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70, 
+                          fontSize: screenWidth * 0.03
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -218,7 +224,7 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  height: 56,
+                  height: screenHeight * 0.06,
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       await Navigator.push(

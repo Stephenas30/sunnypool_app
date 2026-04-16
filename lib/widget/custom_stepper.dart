@@ -33,8 +33,8 @@ class CustomStepper extends StatelessWidget {
                     // Cercle
                     AnimatedContainer(
                       duration: Duration(milliseconds: 300),
-                      width: 30,
-                      height: 30,
+                      width: screenHeight * 0.035,
+                      height: screenHeight * 0.035,
                       decoration: BoxDecoration(
                         color: index <= currentStep
                             ? Colors.amber

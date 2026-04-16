@@ -28,6 +28,7 @@ class AddPiscineScreen extends StatefulWidget {
 }
 
 class _AddPiscineScreen extends State<AddPiscineScreen> {
+
   final _formKey = GlobalKey<FormState>();
   final _formKey2 = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
@@ -731,6 +732,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isWideScreen = MediaQuery.of(context).size.width >= 960;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       appBar: AppBar(
@@ -771,7 +773,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: isWideScreen ? 32 : 14,
-                  vertical: 14,
+                  vertical: 10,
                 ),
                 child: Column(
                   children: [
@@ -781,20 +783,21 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                           'Renseignez les informations essentielles pour un suivi précis et personnalisé.',
                       child: Row(
                         children: [
-                          Image.asset('assets/logo.png', height: 48),
+                          Image.asset('assets/logo.png', height: screenWidth * 0.05),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Complétez les 5 étapes pour finaliser votre espace.',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: Colors.white70,
+                                fontSize: screenWidth * 0.03
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
                     Expanded(child: _buildStepper()),
                   ],
                 ),
@@ -1529,6 +1532,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   }
 
   Widget _buildStepper() {
+    final screenWidth = MediaQuery.of(context).size.width;
     final List<String> steps = [
       'Piscine',
       'Traitements',
@@ -1552,9 +1556,10 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 'Étape ${_currentStep + 1} / ${steps.length} • ${steps[_currentStep]}',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white70,
                   fontWeight: FontWeight.w600,
+                  fontSize: screenWidth * 0.03
                 ),
               ),
             ),
@@ -1563,12 +1568,12 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
               borderRadius: BorderRadius.circular(10),
               child: LinearProgressIndicator(
                 value: (_currentStep + 1) / steps.length,
-                minHeight: 7,
+                minHeight: 2,
                 backgroundColor: Colors.white12,
                 color: Colors.amber,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             CustomStepper(
               currentStep: _currentStep,
               steps: steps,
@@ -1582,7 +1587,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                 }
               },
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 10),
             Expanded(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
