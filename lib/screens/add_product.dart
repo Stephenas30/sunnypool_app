@@ -29,6 +29,8 @@ class _AddProductState extends State<AddProduct> {
 
   Categorie? _selectedCategory;
 
+  bool _isSubmitting = false;
+
   Future<void> _takePhoto(String imageType) async {
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo != null) {
@@ -46,10 +48,15 @@ class _AddProductState extends State<AddProduct> {
   }
 
   _AddProduct() {
+    if (_isSubmitting) return;
     print("AddProduct constructor called");
     print("Name product: ${_nameController.text}");
     print("Brand product: ${_brandController.text}");
     print("Selected category: $_selectedCategory");
+
+    setState(() {
+      _isSubmitting = true;
+    });
 
     final quantity = int.tryParse(_quantityController.text.trim());
     final unit = _unitController.text.trim();
@@ -91,9 +98,16 @@ class _AddProductState extends State<AddProduct> {
           );
         }
       }).catchError((error) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Erreur de connexion : $error")),
         );
+      }).whenComplete((){
+        if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
       });
     });
   }
@@ -293,10 +307,20 @@ class _AddProductState extends State<AddProduct> {
                 SizedBox(
                   width: double.infinity,
                   height: 52,
-                  child: ElevatedButton(
-                    onPressed: _AddProduct,
-                    child: Text(
-                      'Ajouter ce produit',
+                  child: ElevatedButton.icon(
+                    onPressed: _isSubmitting ? null : _AddProduct,
+                    icon: _isSubmitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.black,
+                                  ),
+                                )
+                              : const Icon(Icons.check_circle),
+                    label: Text(
+                      (_isSubmitting ? 'Ajout...' : 'Ajouter ce produit'),
                       style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
                     ),
                   ),

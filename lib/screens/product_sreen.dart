@@ -135,35 +135,33 @@ class _ProductScreenState extends State<ProductScreen> {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.symmetric(
-            vertical: 20,
-            horizontal: screenWidth * 0.08,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Column(
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                 decoration: BoxDecoration(
                   color: const Color(0xFF121212),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                  border: Border.all(color: Colors.amber.withOpacity(0.22)),
                 ),
                 child: Column(
                   children: [
-                    Image.asset('assets/logo.png', height: screenHeight / 7),
-                    const SizedBox(height: 10),
+                    Image.asset('assets/logo.png', height: screenHeight * 0.1),
+                    const SizedBox(height: 8),
                     Text(
                       'Sélectionnez vos produits d\'entretien piscine pour que Sunny vous donne des recommandations précises et optimisées.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white70,
+                          fontSize: screenWidth * 0.03
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 20),
               Expanded(
                 child: _isLoading
                     ? const Center(
@@ -231,7 +229,7 @@ class _ProductScreenState extends State<ProductScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              /* const SizedBox(height: 10),
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -250,7 +248,7 @@ class _ProductScreenState extends State<ProductScreen> {
                     ),
                   ),
                 ),
-              ),
+              ), */
             ],
           ),
         ),
