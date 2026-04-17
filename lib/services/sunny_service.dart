@@ -37,9 +37,12 @@ class SunnyService {
     String token,
     String sessionId,
     MessageModel message,
+    [dynamic thread_id]
   ) async {
-    print(sessionId);
-
+    print(thread_id);
+    
+      thread_id ??= sessionId;
+  
     final photoBase64 = await _toBase64IfFilePath(message.image);
 
     final response = await http.post(
@@ -52,7 +55,9 @@ class SunnyService {
         "message": message.message,
         "image_base64": photoBase64,
         "conversation_id": sessionId,
-        "data_options": message.data_options
+        "data_options": message.data_options,
+        "analyse": message.analyse,
+        "thread_id": thread_id
       }),
     );
 
@@ -123,4 +128,47 @@ class SunnyService {
       throw Exception("Erreur de connexion : \\${response.body}");
     }
   }
+
+Future<Map<String, dynamic>> getAllConversation(
+    String token,
+    int poolId,
+  ) async {
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/chat/threads?pool_id=$poolId"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception("Erreur de connexion : \\${response.body}");
+    }
+  }
+
+  Future<Map<String, dynamic>> getConversation(
+    String token,
+    int threadId,
+  ) async {
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/chat/threads/$threadId/messages"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception("Erreur de connexion : \\${response.body}");
+    }
+  }
+
 }

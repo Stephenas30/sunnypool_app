@@ -7,6 +7,7 @@ import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/services/sunny_service.dart';
+import 'package:sunnypool_app/utils/poolId_storage.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,23 +26,27 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   final uuid = Uuid();
   final ImagePicker _picker = ImagePicker();
   String? sessionId = null;
+  int? thread_id = null;
   bool _isLoading = false;
   File? image_pool;
+
+  String? tokenValue;
 
   static const _borderColor = Color(0x33FFD54F);
 
   static const int _pollMaxAttempts = 25;
   static const Duration _pollInterval = Duration(seconds: 2);
 
+  List<dynamic> listConversation = [];
+
   Map<String, bool> optionSend = {
-    'meteo': false, 
-    'historique': false, 
+    'meteo': false,
+    'historique': true,
     'produits': false,
-    'alertes': false, 
-    'planning': false, 
-    'coordonnees': false
+    'alertes': true,
+    'planning': true,
+    'coordonnees': true,
   };
-  
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? photo = await _picker.pickImage(source: source);
@@ -114,6 +119,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         sessionId = uuid.v4();
       });
     }
+    print(sessionId);
     TokenStorage.getToken().then((token) {
       if (token == null || token.isEmpty) {
         setState(() {
@@ -132,8 +138,13 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       SunnyService()
           .sendChat(
             token,
-            sessionId!,
-            MessageModel(message: userMessage, image: image?.path, data_options: optionSend),
+            sessionId.toString(),
+            MessageModel(
+              message: userMessage,
+              image: image?.path,
+              data_options: optionSend,
+            ),
+            thread_id,
           )
           .then((response) async {
             /* final responseChat = (response['output'] ?? '').toString();
@@ -237,10 +248,32 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     throw TimeoutException('Polling timeout');
   }
 
+  Future<void> _getAllConversation() async {
+    tokenValue = await TokenStorage.getToken();
+    String? poolId = await PoolIdStorage.getPoolId();
+    Map<String, dynamic> response = await SunnyService().getAllConversation(
+      tokenValue!,
+      int.tryParse(poolId!)!,
+    );
+    setState(() {
+      listConversation = response['data'];
+      //print(listConversation);
+    });
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _getAllConversation();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
+    final theme = Theme.of(context);
 
     return Scaffold(
       key: scaffoldKey,
@@ -303,6 +336,39 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                   Navigator.pop(context),
                 },
               ),
+              SizedBox(height: 10),
+              Divider(),
+              SizedBox(height: 10),
+              listConversation.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Aucune conversation disponible pour le moment.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white54,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: Colors.amber,
+                      onRefresh: _getAllConversation,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: screenHeight * 0.8,
+                          //maxWidth: screenWidth * 0.4
+                        ),
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
+                          ),
+                          itemCount: listConversation.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) =>
+                              _buildListConversation(listConversation[index]),
+                        ),
+                      ),
+                    ),
               /* ListTile(
                 leading: const Icon(Icons.person, color: Colors.amber),
                 title: const Text('Profil', style: TextStyle(color: Colors.white)),
@@ -335,7 +401,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                 padding: const EdgeInsets.only(left: 8, top: 8),
                 child: IconButton(
                   icon: const Icon(Icons.menu, color: Colors.amber),
-                  onPressed: () => scaffoldKey.currentState?.openDrawer(),
+                  onPressed: () => {
+                    _getAllConversation(),
+                    scaffoldKey.currentState?.openDrawer()
+                  },
                 ),
               ),
             ),
@@ -450,20 +519,27 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                       : const SizedBox.shrink(),
                   const SizedBox(height: 6),
                   Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Wrap(
                         spacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        alignment: WrapAlignment.center,
-                        children: optionSend.keys.map((item) {
+                        crossAxisAlignment: WrapCrossAlignment.start,
+                        //alignment: WrapAlignment.spaceBetween,
+                        children: ['meteo', 'produits'].map((item) {
                           //final selected = optionSendChecked.contains(item);
                           return FilterChip(
-                            label: Text(item, style: TextStyle(fontSize: screenWidth * 0.02),),
+                            label: Text(
+                              item,
+                              style: TextStyle(fontSize: screenWidth * 0.02),
+                            ),
                             selected: optionSend[item]!,
                             selectedColor: Colors.amber,
                             checkmarkColor: Colors.black,
                             labelStyle: TextStyle(
-                              color: optionSend[item]! ? Colors.black : Colors.white,
+                              color: optionSend[item]!
+                                  ? Colors.black
+                                  : Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
                             side: const BorderSide(color: _borderColor),
@@ -525,6 +601,73 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListConversation(Map<String, dynamic> conversation) {
+    final theme = Theme.of(context);
+    final title = conversation['title'];
+    final threadId = conversation['id'];
+
+    return /* Card(
+      child: */ InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () async {
+        setState(() {
+          sessionId = threadId.toString();
+          thread_id = threadId;
+          _messages.clear();
+          _isLoading = true;
+        });
+        Navigator.pop(context);
+        dynamic message = await SunnyService().getConversation(
+          tokenValue!,
+          threadId,
+        );
+        List<dynamic> data = message['data'];
+        List.generate(data.length, (index) {
+          //print(data[index]);
+          setState(() {
+            _messages.add({'role': 'user', 'text': data[index]['message']});
+            _messages.add({
+              'role': 'assistant',
+              'text': data[index]['response'],
+            });
+            _isLoading = false;
+          });
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
+        child: Flex(
+          direction: Axis.horizontal,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            /* ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.network(
+                  pool.photoPool?.photoBassin ?? 'assets/piscine.png',
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 80,
+                    height: 80,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.pool, color: Colors.white54, size: 40),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16), */
+            Text(
+              title,
+              style: theme.textTheme.bodyLarge?.copyWith(color: Colors.amber),
+            ),
+
+            const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.amber),
           ],
         ),
       ),
