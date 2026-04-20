@@ -17,6 +17,89 @@ const listDiagnostique = [
 
 class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
 
+  bool _isSubmitting = false;
+
+  _analyse() {
+    if (_isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    Map<String, String> valueAnalyse = {
+      
+    };
+    print(valueAnalyse);
+    /* TokenStorage.getToken().then((tokenValue) {
+      if (sessionId == null) {
+        setState(() {
+          sessionId = uuid.v4();
+        });
+      }
+      SunnyService()
+          .sendChat(
+            tokenValue!,
+            sessionId!,
+            MessageModel(
+              message:
+                  "Analyser mon eau à partir de ses mesures (ph, chlore, tac, stabilisant, temperature) dans l'analyse de l'eau",
+              analyse: valueAnalyse,
+            ),
+          )
+          .then((response) async {
+            print(response);
+            _isLoading = true;
+            try {
+              if (response['response'] == "pending") {
+                setState(() {
+                  _messages.add({
+                    'role': 'assistant',
+                    'text': 'En cours de traitement. Merci de patienter...',
+                  });
+                  _isLoading = false;
+                });
+              }
+              final finalResponse = await _pollUntilCompleted(
+                tokenValue,
+                response['conversation_id'],
+              );
+              if (!mounted) return;
+
+              setState(() {
+                _messages[_messages.length - 1] = {
+                  'role': 'assistant',
+                  'text': finalResponse,
+                };
+                _isLoading = false;
+                outputAnalyse = finalResponse;
+              });
+            } catch (error) {
+              if (!mounted) return;
+              setState(() {
+                _messages.add({
+                  'role': 'assistant',
+                  'text': 'Temps d\'attente dépassé. Merci de réessayer.',
+                });
+                _isLoading = false;
+              });
+              print(_messages);
+            }
+          })
+          .catchError((onError) {
+            if (!mounted) return;
+            print('Error $onError');
+          })
+          .whenComplete(() {
+            if (mounted) {
+              setState(() {
+                _isSubmitting = false;
+                analyseChecked = null;
+              });
+            }
+          });
+    }); */
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -83,7 +166,7 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
                     .map((item) => _buildListTutoriels(item))
                     .toList(),
               ),
-              Column(
+              /* Column(
                 children: [
                   SizedBox(
                     width: double.infinity,
@@ -113,7 +196,30 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
               ),
                   ),
                 ],
-              )
+              ) */
+             SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _isSubmitting ? null : _analyse,
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                      : const Icon(Icons.check_circle),
+                  label: Text(
+                    _isSubmitting ? 'Analysé...' : 'Analyser',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ),
             ],
             ),
           ),

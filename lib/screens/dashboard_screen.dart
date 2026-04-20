@@ -8,7 +8,9 @@ import 'package:sunnypool_app/screens/add_product.dart';
 import 'package:sunnypool_app/screens/analyse_screen.dart';
 import 'package:sunnypool_app/screens/chat_sunny_screen.dart';
 import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
+import 'package:sunnypool_app/screens/diagnostique_photo_screen.dart';
 import 'package:sunnypool_app/screens/historique_analyses.dart';
+import 'package:sunnypool_app/screens/information_piscine_screen.dart';
 import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/screens/mypiscine_screen.dart';
 import 'package:sunnypool_app/screens/photos_screen.dart';
@@ -270,48 +272,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => Scaffold(
-                                    appBar: AppBar(
-                                      title: const Text(
-                                        'Votre Piscine',
-                                        style: TextStyle(color: Colors.yellow),
-                                      ),
-                                      backgroundColor: Colors.black,
-                                      leading: IconButton(
-                                        icon: const Icon(
-                                          Icons.arrow_back,
-                                          color: Colors.yellow,
-                                        ),
-                                        onPressed: () {
-                                          Navigator.pop(context);
-                                        },
-                                      ),
-                                      centerTitle: true,
-                                      actions: [
-                                        IconButton(
-                                          icon: CircleAvatar(
-                                            backgroundImage: AssetImage(
-                                              "assets/icon.png",
-                                            ),
-                                            radius: 16,
-                                          ),
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => ProfileScreen(),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                    body: ConfigurationpiscineScreen(
+                                  builder: (_) => 
+                                    InformationPiscineScreen(
                                       pool: checkPool,
                                     traitementChecked: [traitement['product']],
                                     ),
-                                  ),
-                                ),
+                                  )
                               );
                             },
                             style: ElevatedButton.styleFrom(

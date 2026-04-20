@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sunnypool_app/widget/pick_image.dart';
 
 class PhotosScreen extends StatefulWidget {
   const PhotosScreen({Key? key}) : super(key: key);
@@ -22,8 +23,31 @@ class _PhotosScreenState extends State<PhotosScreen> {
   File? image_local;
   File? image_equipements;
 
-    Future<void> _takePhoto(String imageType) async {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    void _takePhoto(String imageType) {
+      print('Prendre une photo pour: $imageType');
+
+      PickImage(onImagePicked: (photo) {
+        if (photo != null) {
+          setState(() {
+            switch (imageType) {
+              case 'Vue d\'ensemble':
+                image_ensemble = File(photo.path);
+                break;
+              case 'Eau de la piscine':
+                image_eau = File(photo.path);
+                break;
+              case 'Local technique':
+                image_local = File(photo.path);
+                break;
+              case 'Equipements':
+                image_equipements = File(photo.path);
+                break;
+            }
+          });
+        }
+
+      }, context: context).showImageSourceSheet();
+    /* final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo != null) {
       setState(() {
         switch (imageType) {
@@ -41,7 +65,90 @@ class _PhotosScreenState extends State<PhotosScreen> {
             break;
         }
       });
-    }
+    } */
+  }
+
+  bool _isSubmitting = false;
+
+  _analyse() {
+    if (_isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    Map<String, String> valueAnalyse = {
+      
+    };
+    print(valueAnalyse);
+    /* TokenStorage.getToken().then((tokenValue) {
+      if (sessionId == null) {
+        setState(() {
+          sessionId = uuid.v4();
+        });
+      }
+      SunnyService()
+          .sendChat(
+            tokenValue!,
+            sessionId!,
+            MessageModel(
+              message:
+                  "Analyser mon eau à partir de ses mesures (ph, chlore, tac, stabilisant, temperature) dans l'analyse de l'eau",
+              analyse: valueAnalyse,
+            ),
+          )
+          .then((response) async {
+            print(response);
+            _isLoading = true;
+            try {
+              if (response['response'] == "pending") {
+                setState(() {
+                  _messages.add({
+                    'role': 'assistant',
+                    'text': 'En cours de traitement. Merci de patienter...',
+                  });
+                  _isLoading = false;
+                });
+              }
+              final finalResponse = await _pollUntilCompleted(
+                tokenValue,
+                response['conversation_id'],
+              );
+              if (!mounted) return;
+
+              setState(() {
+                _messages[_messages.length - 1] = {
+                  'role': 'assistant',
+                  'text': finalResponse,
+                };
+                _isLoading = false;
+                outputAnalyse = finalResponse;
+              });
+            } catch (error) {
+              if (!mounted) return;
+              setState(() {
+                _messages.add({
+                  'role': 'assistant',
+                  'text': 'Temps d\'attente dépassé. Merci de réessayer.',
+                });
+                _isLoading = false;
+              });
+              print(_messages);
+            }
+          })
+          .catchError((onError) {
+            if (!mounted) return;
+            print('Error $onError');
+          })
+          .whenComplete(() {
+            if (mounted) {
+              setState(() {
+                _isSubmitting = false;
+                analyseChecked = null;
+              });
+            }
+          });
+    }); */
   }
   
   @override
@@ -105,10 +212,15 @@ class _PhotosScreenState extends State<PhotosScreen> {
                   ),
                 ],
               ),
-              ConstrainedBox(
+              Container(
+                //height: 1,
+                width: double.infinity,
+                //color: Colors.white38,
+                margin: EdgeInsets.symmetric(horizontal: 30),
+                child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minWidth: screenWidth,
-                  maxHeight: screenHeight / 3,
+                  maxHeight: screenHeight / 2.3,
                 ),
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -120,6 +232,8 @@ class _PhotosScreenState extends State<PhotosScreen> {
                   ],
                 ),
             ),
+              ),
+              
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF1A1A1A),
@@ -184,7 +298,7 @@ class _PhotosScreenState extends State<PhotosScreen> {
                   ],
                 ),
               ),
-              ElevatedButton(
+              /* ElevatedButton(
                 onPressed: () {
                   print('Confirmer et continuer');
                   print('Image ensemble: ${image_ensemble?.path}');
@@ -209,6 +323,29 @@ class _PhotosScreenState extends State<PhotosScreen> {
                   child: Text(
                     'Passer cette étape',
                     style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
+                  ),
+                ),
+              ), */
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _isSubmitting ? null : _analyse,
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                      : const Icon(Icons.check_circle),
+                  label: Text(
+                    _isSubmitting ? 'Analysé...' : 'Analyser',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ),

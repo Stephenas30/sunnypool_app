@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:sunnypool_app/services/analyse_service.dart';
+import 'package:sunnypool_app/utils/poolId_storage.dart';
+import 'package:sunnypool_app/utils/token_storage.dart';
 
 final formatter = DateFormat('d MMM');
 
@@ -21,7 +24,7 @@ class HistoriqueAnalyses extends StatefulWidget {
 }
 
 class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
-  List<EvolutionData> phEvolution = [
+  /* List<EvolutionData> phEvolution = [
     EvolutionData(date: DateTime(2026, 1, 1), value: 7.2),
     EvolutionData(date: DateTime(2026, 1, 15), value: 7.5),
     EvolutionData(date: DateTime(2026, 2, 1), value: 7.8),
@@ -51,7 +54,29 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
     EvolutionData(date: DateTime(2026, 2, 1), value: 7.2),
     EvolutionData(date: DateTime(2026, 2, 15), value: 8.0),
     EvolutionData(date: DateTime(2026, 3, 1), value: 5.9),
-  ];
+  ]; */
+
+  List<Map<String, dynamic>> analyses = [];
+
+  void _loadAnalyses() async {
+    var token = await TokenStorage.getToken();
+    var poolId = await PoolIdStorage.getPoolId();
+    await AnalyseService().getAllAnalyse(token!, int.tryParse(poolId!)!).then((data) {
+      print(data);
+      setState(() {
+        analyses = List<Map<String, dynamic>>.from(data['data'] ?? []);
+      });
+    }).catchError((error) {
+      print("Erreur lors du chargement des analyses : $error");
+    });
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _loadAnalyses();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,16 +121,16 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
               const SizedBox(height: 8),
               Expanded(
                 child: ListView.separated(
-                  itemCount: phEvolution.length,
+                  itemCount: analyses.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) => Card(
                     child: ListTile(
                       title: Text(
-                        'Analyse ${formatter.format(phEvolution[index].date)}',
+                        'Analyse ${/* formatter.format( */analyses[index]['updated_at']/* ) */}',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        'pH ${phEvolution[index].value} • Chlore ${chloreEvolution[index].value} • TAC ${tacEvolution[index].value}',
+                        'pH ${analyses[index]['analyse']['ph']} • Chlore ${analyses[index]['analyse']['chlore']} • TAC ${analyses[index]['analyse']['tac']} • Stabilisants ${analyses[index]['analyse']['stabilisant'] }',
                         style: const TextStyle(color: Colors.white70),
                       ),
                       trailing: const Icon(Icons.search, color: Colors.amber),
@@ -170,11 +195,11 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                       getTitlesWidget: (value, meta) {
                         final index = value.round();
 
-                        if (index < 0 || index >= phEvolution.length) {
+                        if (index < 0 || index >= analyses.length) {
                           return const SizedBox();
                         }
 
-                        final date = phEvolution[index].date;
+                        final date = DateTime.parse(analyses[index]['updated_at']);
                         final day = date.day.toString().padLeft(2, '0');
                         final month = date.month.toString().padLeft(2, '0');
                         return Text('$day/$month', style: const TextStyle(color: Colors.white70, fontSize: 11));
@@ -182,27 +207,27 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                     ),
                   ),
                 ),
-                minX: 0,
-                maxX: (phEvolution.length - 1).toDouble(),
+                /* minX: 0,
+                maxX: (analyses.length - 1).toDouble(),
                 minY:
-                    phEvolution
-                        .map((p) => p.value)
+                    analyses
+                        .map((p) => p['analyse']['ph'])
                         .reduce((a, b) => a < b ? a : b) -
                     5,
                 maxY:
-                    phEvolution
-                        .map((p) => p.value)
+                    analyses
+                        .map((p) => p['analyse']['ph'])
                         .reduce((a, b) => a > b ? a : b) +
-                    5,
+                    5, */
                 borderData: FlBorderData(show: true),
                 lineBarsData: [
                   LineChartBarData(
                     isCurved: true,
                     spots: List.generate(
-                      chloreEvolution.length,
+                      analyses.length,
                       (index) => FlSpot(
                         index.toDouble(),
-                        chloreEvolution[index].value,
+                        double.parse(analyses[index]['analyse']['chlore'].toString()),
                       ),
                     ),
                     barWidth: 4,
@@ -212,9 +237,9 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                   LineChartBarData(
                     isCurved: true,
                     spots: List.generate(
-                      tacEvolution.length,
+                      analyses.length,
                       (index) =>
-                          FlSpot(index.toDouble(), tacEvolution[index].value),
+                          FlSpot(index.toDouble(), double.parse(analyses[index]['analyse']['tac'].toString()) ),
                     ),
                     barWidth: 4,
                     dotData: FlDotData(show: true),
@@ -223,10 +248,10 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                   LineChartBarData(
                     isCurved: true,
                     spots: List.generate(
-                      stabilisantEvolution.length,
+                      analyses.length,
                       (index) => FlSpot(
                         index.toDouble(),
-                        stabilisantEvolution[index].value,
+                        double.parse(analyses[index]['analyse']['stabilisant'].toString()),
                       ),
                     ),
                     barWidth: 4,
@@ -236,9 +261,9 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                   LineChartBarData(
                     isCurved: true,
                     spots: List.generate(
-                      phEvolution.length,
+                      analyses.length,
                       (index) =>
-                          FlSpot(index.toDouble(), phEvolution[index].value),
+                          FlSpot(index.toDouble(), double.parse(analyses[index]['analyse']['ph'].toString())),
                     ),
                     barWidth: 4,
                     dotData: FlDotData(show: true),

@@ -22,12 +22,17 @@ class ChatSunnyScreen extends StatefulWidget {
 class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _messagesScrollController = ScrollController();
   final List<Map<String, String>> _messages = [];
   final uuid = Uuid();
   final ImagePicker _picker = ImagePicker();
   String? sessionId = null;
   int? thread_id = null;
   bool _isLoading = false;
+
+  bool activeWrap = false;
+
+
   File? image_pool;
 
   String? tokenValue;
@@ -110,7 +115,24 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       _isLoading = true;
       image_pool = null;
     });
+    _scrollToBottom();
     _controller.clear();
+  }
+
+  void _scrollToBottom({bool animated = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_messagesScrollController.hasClients) return;
+      final target = _messagesScrollController.position.maxScrollExtent;
+      if (animated) {
+        _messagesScrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _messagesScrollController.jumpTo(target);
+      }
+    });
   }
 
   void _getAIResponse(String userMessage, File? image) {
@@ -129,6 +151,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           });
           _isLoading = false;
         });
+        _scrollToBottom();
         return;
       }
       /*       setState(() {
@@ -174,6 +197,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                   });
                   _isLoading = false;
                 });
+                _scrollToBottom();
               }
               final finalResponse = await _pollUntilCompleted(
                 token,
@@ -188,6 +212,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                 };
                 _isLoading = false;
               });
+              _scrollToBottom();
             } catch (error) {
               if (!mounted) return;
               setState(() {
@@ -197,6 +222,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                 });
                 _isLoading = false;
               });
+              _scrollToBottom();
             }
           })
           .catchError((error) {
@@ -207,6 +233,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               });
               _isLoading = false;
             });
+            _scrollToBottom();
 
             if (error is ApiException && error.statusCode == 401) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -410,6 +437,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
             ),
             Expanded(
               child: ListView.builder(
+                controller: _messagesScrollController,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 8,
@@ -522,6 +550,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      activeWrap ?
                       Wrap(
                         spacing: 8,
                         crossAxisAlignment: WrapCrossAlignment.start,
@@ -550,7 +579,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                             },
                           );
                         }).toList(),
-                      ),
+                      ) :  SizedBox.shrink(),
                       Row(
                         children: [
                           Expanded(
@@ -575,6 +604,17 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                   borderSide: const BorderSide(
                                     color: Colors.amber,
                                   ),
+                                ),
+                                prefixIcon: IconButton(
+                                  icon: const Icon(
+                                    Icons.menu,
+                                    color: Colors.white54,
+                                  ),
+                                  onPressed: (){
+                                    setState(() {
+                                      activeWrap = !activeWrap;
+                                    });
+                                  },
                                 ),
                                 suffixIcon: IconButton(
                                   icon: const Icon(
@@ -628,17 +668,24 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           threadId,
         );
         List<dynamic> data = message['data'];
-        List.generate(data.length, (index) {
-          //print(data[index]);
-          setState(() {
-            _messages.add({'role': 'user', 'text': data[index]['message']});
-            _messages.add({
-              'role': 'assistant',
-              'text': data[index]['response'],
-            });
-            _isLoading = false;
+        final loadedMessages = <Map<String, String>>[];
+        for (final item in data) {
+          loadedMessages.add({
+            'role': 'user',
+            'text': (item['message'] ?? '').toString(),
           });
+          loadedMessages.add({
+            'role': 'assistant',
+            'text': (item['response'] ?? '').toString(),
+          });
+        }
+        setState(() {
+          _messages
+            ..clear()
+            ..addAll(loadedMessages);
+          _isLoading = false;
         });
+        _scrollToBottom(animated: false);
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
@@ -646,27 +693,14 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           direction: Axis.horizontal,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            /* ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.network(
-                  pool.photoPool?.photoBassin ?? 'assets/piscine.png',
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.pool, color: Colors.white54, size: 40),
-                  ),
-                ),
+            Expanded(
+              child: Text(
+                title,
+                style: theme.textTheme.bodyLarge?.copyWith(color: Colors.amber),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(width: 16), */
-            Text(
-              title,
-              style: theme.textTheme.bodyLarge?.copyWith(color: Colors.amber),
             ),
-
             const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.amber),
           ],
         ),
@@ -677,6 +711,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _messagesScrollController.dispose();
     super.dispose();
   }
 }
