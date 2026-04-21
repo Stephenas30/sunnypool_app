@@ -40,9 +40,10 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } catch (e) {
+        //print("Erreur de connexion: ${e}");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Identifiant ou mot de passe incorrect"),
+            content: Text("$e"),
             backgroundColor: Colors.red,
           ),
         );

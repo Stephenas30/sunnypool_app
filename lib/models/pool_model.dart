@@ -6,7 +6,56 @@ enum TypeFiltre { sable, verre, cartouche, diatomee }
 
 enum BondeFond { verticale, horizontale, non }
 
-enum TypePool { coque, beton, liner, membrane, horsSol }
+enum TypePool { coque, beton, liner, membrane, horsSol, enterree }
+
+extension TypePoolExtension on TypePool {
+  String get label {
+    switch (this) {
+      case TypePool.coque:
+        return "Coque";
+      case TypePool.beton:
+        return "Béton";
+      case TypePool.liner:
+        return "Liner";
+      case TypePool.membrane:
+        return "Membrane";
+      case TypePool.horsSol:
+        return "Hors-sol";
+      case TypePool.enterree:
+        return "Enterrée";
+      default:
+        return this.toString().split('.').last;
+    }
+  }
+
+  static TypePool fromString(String value) {
+    final normalizedValue = value.trim().toLowerCase();
+
+    /* for (final categorie in Categorie.values) {
+      if (categorie.name.toLowerCase() == normalizedValue ||
+          categorie.label.toLowerCase() == normalizedValue) {
+        return categorie;
+      }
+    } */
+
+    switch (normalizedValue) {
+      case 'coque':
+        return TypePool.coque;
+      case 'beton':
+        return TypePool.beton;
+      case 'liner':
+        return TypePool.liner;
+      case 'membrane':
+        return TypePool.membrane;
+      case 'hors_sol':
+        return TypePool.horsSol;
+      case 'enterree':
+        return TypePool.enterree;
+      default:
+        throw ArgumentError('TypePool inconnu: $value');
+    }
+  }
+}
 
 enum Traitement { chlore, brome, sel, uv }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:sunnypool_app/models/product_model.dart';
+import 'package:sunnypool_app/services/internet_service.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/utils/poolId_storage.dart';
 
@@ -22,6 +23,12 @@ class ProductService {
   }
 
   Future<Map<String, dynamic>> getAllProducts(String token) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+
     String idPool = await PoolIdStorage.getPoolId() as String;
     final response = await http.get(
       Uri.parse("$baseUrl/pool/$idPool/products"),
@@ -45,6 +52,12 @@ class ProductService {
     ProductModel product,
     {String? idPool}
   ) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+
     print(token);
     idPool ??= await PoolIdStorage.getPoolId() as String;
     final photoFaceBase64 = await _toBase64IfFilePath(product.photoFace);

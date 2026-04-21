@@ -4,6 +4,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:sunnypool_app/services/internet_service.dart';
 
 /* Future<XFile?> compressImage(String path) async {
   final result = await FlutterImageCompress.compressAndGetFile(
@@ -36,13 +37,19 @@ class SunnyService {
   Future<Map<String, dynamic>> sendChat(
     String token,
     String sessionId,
-    MessageModel message,
-    [dynamic thread_id]
-  ) async {
+    MessageModel message, [
+    dynamic thread_id,
+  ]) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+
     print(thread_id);
-    
-      thread_id ??= sessionId;
-  
+
+    thread_id ??= sessionId;
+
     final photoBase64 = await _toBase64IfFilePath(message.image);
 
     final response = await http.post(
@@ -57,7 +64,7 @@ class SunnyService {
         "conversation_id": sessionId,
         "data_options": message.data_options,
         "analyse": message.analyse,
-        "thread_id": thread_id
+        "thread_id": thread_id,
       }),
     );
 
@@ -112,6 +119,11 @@ class SunnyService {
     String token,
     String conversationId,
   ) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
     print(conversationId);
     final response = await http.get(
       Uri.parse("$baseUrl/chat/poll?conversation_id=$conversationId"),
@@ -129,11 +141,15 @@ class SunnyService {
     }
   }
 
-Future<Map<String, dynamic>> getAllConversation(
+  Future<Map<String, dynamic>> getAllConversation(
     String token,
     int poolId,
   ) async {
+    final hasInternet = await InternetService().hasInternet();
 
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
     final response = await http.get(
       Uri.parse("$baseUrl/chat/threads?pool_id=$poolId"),
       headers: {
@@ -154,7 +170,11 @@ Future<Map<String, dynamic>> getAllConversation(
     String token,
     int threadId,
   ) async {
+    final hasInternet = await InternetService().hasInternet();
 
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
     final response = await http.get(
       Uri.parse("$baseUrl/chat/threads/$threadId/messages"),
       headers: {
@@ -170,5 +190,4 @@ Future<Map<String, dynamic>> getAllConversation(
       throw Exception("Erreur de connexion : \\${response.body}");
     }
   }
-
 }

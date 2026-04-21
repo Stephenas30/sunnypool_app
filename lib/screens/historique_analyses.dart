@@ -24,51 +24,32 @@ class HistoriqueAnalyses extends StatefulWidget {
 }
 
 class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
-  /* List<EvolutionData> phEvolution = [
-    EvolutionData(date: DateTime(2026, 1, 1), value: 7.2),
-    EvolutionData(date: DateTime(2026, 1, 15), value: 7.5),
-    EvolutionData(date: DateTime(2026, 2, 1), value: 7.8),
-    EvolutionData(date: DateTime(2026, 2, 15), value: 8.0),
-    EvolutionData(date: DateTime(2026, 3, 1), value: 7.9),
-  ];
-
-  List<EvolutionData> chloreEvolution = [
-    EvolutionData(date: DateTime(2026, 1, 1), value: 4.2),
-    EvolutionData(date: DateTime(2026, 1, 15), value: 5.5),
-    EvolutionData(date: DateTime(2026, 2, 1), value: 9.2),
-    EvolutionData(date: DateTime(2026, 2, 15), value: 8.0),
-    EvolutionData(date: DateTime(2026, 3, 1), value: 6.9),
-  ];
-
-  List<EvolutionData> tacEvolution = [
-    EvolutionData(date: DateTime(2026, 1, 1), value: 3.2),
-    EvolutionData(date: DateTime(2026, 1, 15), value: 8.5),
-    EvolutionData(date: DateTime(2026, 2, 1), value: 4.2),
-    EvolutionData(date: DateTime(2026, 2, 15), value: 5.0),
-    EvolutionData(date: DateTime(2026, 3, 1), value: 6.9),
-  ];
-
-  List<EvolutionData> stabilisantEvolution = [
-    EvolutionData(date: DateTime(2026, 1, 1), value: 5.2),
-    EvolutionData(date: DateTime(2026, 1, 15), value: 4.5),
-    EvolutionData(date: DateTime(2026, 2, 1), value: 7.2),
-    EvolutionData(date: DateTime(2026, 2, 15), value: 8.0),
-    EvolutionData(date: DateTime(2026, 3, 1), value: 5.9),
-  ]; */
-
   List<Map<String, dynamic>> analyses = [];
+  bool isLoading = true;
+  String? _errorMessage;
 
   void _loadAnalyses() async {
     var token = await TokenStorage.getToken();
     var poolId = await PoolIdStorage.getPoolId();
-    await AnalyseService().getAllAnalyse(token!, int.tryParse(poolId!)!).then((data) {
-      print(data);
-      setState(() {
-        analyses = List<Map<String, dynamic>>.from(data['data'] ?? []);
-      });
-    }).catchError((error) {
-      print("Erreur lors du chargement des analyses : $error");
-    });
+    await AnalyseService()
+        .getAllAnalyse(token!, int.tryParse(poolId!)!)
+        .then((data) {
+          print(data);
+          setState(() {
+            analyses = List<Map<String, dynamic>>.from(data['data'] ?? []);
+          });
+        })
+        .catchError((error) {
+          setState(() {
+            _errorMessage = 'Erreur lors du chargement des analyses : $error';
+          });
+          //print("Erreur lors du chargement des analyses : $error");
+        })
+        .whenComplete(() {
+          setState(() {
+            isLoading = false;
+          });
+        });
   }
 
   @override
@@ -104,55 +85,83 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Column(
-            children: [
-              _buildChart(),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    'Historique des analyses',
-                    style: theme.textTheme.titleLarge?.copyWith(color: Colors.amber),
+          child: isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.amber),
+                )
+              : _errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _errorMessage!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.redAccent,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: analyses.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) => Card(
-                    child: ListTile(
-                      title: Text(
-                        'Analyse ${/* formatter.format( */analyses[index]['updated_at']/* ) */}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                )
+              : Column(
+                  children: [
+                    _buildChart(),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'Historique des analyses',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: Colors.amber,
+                          ),
+                        ),
                       ),
-                      subtitle: Text(
-                        'pH ${analyses[index]['analyse']['ph']} • Chlore ${analyses[index]['analyse']['chlore']} • TAC ${analyses[index]['analyse']['tac']} • Stabilisants ${analyses[index]['analyse']['stabilisant'] }',
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                      trailing: const Icon(Icons.search, color: Colors.amber),
-                      onTap: () {},
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: analyses.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) => Card(
+                          child: ListTile(
+                            title: Text(
+                              'Analyse ${ /* formatter.format( */ analyses[index]['updated_at'] /* ) */}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'pH ${analyses[index]['analyse']['ph']} • Chlore ${analyses[index]['analyse']['chlore']} • TAC ${analyses[index]['analyse']['tac']} • Stabilisants ${analyses[index]['analyse']['stabilisant']}',
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                            trailing: const Icon(
+                              Icons.search,
+                              color: Colors.amber,
+                            ),
+                            onTap: () {},
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        child: Text(
+                          'Nouvelle analyse',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  child: Text(
-                    'Nouvelle analyse',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -172,7 +181,11 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
         children: [
           const Text(
             'Évolution de la qualité de l\'eau',
-            style: TextStyle(fontSize: 18, color: Colors.amber, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.amber,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           SizedBox(
             width: double.infinity,
@@ -199,10 +212,18 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                           return const SizedBox();
                         }
 
-                        final date = DateTime.parse(analyses[index]['updated_at']);
+                        final date = DateTime.parse(
+                          analyses[index]['updated_at'],
+                        );
                         final day = date.day.toString().padLeft(2, '0');
                         final month = date.month.toString().padLeft(2, '0');
-                        return Text('$day/$month', style: const TextStyle(color: Colors.white70, fontSize: 11));
+                        return Text(
+                          '$day/$month',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -227,7 +248,9 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                       analyses.length,
                       (index) => FlSpot(
                         index.toDouble(),
-                        double.parse(analyses[index]['analyse']['chlore'].toString()),
+                        double.parse(
+                          analyses[index]['analyse']['chlore'].toString(),
+                        ),
                       ),
                     ),
                     barWidth: 4,
@@ -238,8 +261,12 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                     isCurved: true,
                     spots: List.generate(
                       analyses.length,
-                      (index) =>
-                          FlSpot(index.toDouble(), double.parse(analyses[index]['analyse']['tac'].toString()) ),
+                      (index) => FlSpot(
+                        index.toDouble(),
+                        double.parse(
+                          analyses[index]['analyse']['tac'].toString(),
+                        ),
+                      ),
                     ),
                     barWidth: 4,
                     dotData: FlDotData(show: true),
@@ -251,7 +278,9 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                       analyses.length,
                       (index) => FlSpot(
                         index.toDouble(),
-                        double.parse(analyses[index]['analyse']['stabilisant'].toString()),
+                        double.parse(
+                          analyses[index]['analyse']['stabilisant'].toString(),
+                        ),
                       ),
                     ),
                     barWidth: 4,
@@ -262,8 +291,12 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                     isCurved: true,
                     spots: List.generate(
                       analyses.length,
-                      (index) =>
-                          FlSpot(index.toDouble(), double.parse(analyses[index]['analyse']['ph'].toString())),
+                      (index) => FlSpot(
+                        index.toDouble(),
+                        double.parse(
+                          analyses[index]['analyse']['ph'].toString(),
+                        ),
+                      ),
                     ),
                     barWidth: 4,
                     dotData: FlDotData(show: true),

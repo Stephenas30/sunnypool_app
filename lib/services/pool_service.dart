@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:sunnypool_app/models/pool_model.dart';
+import 'package:sunnypool_app/services/internet_service.dart';
 
 class ApiException implements Exception {
   final int statusCode;
@@ -33,6 +34,12 @@ class PoolService {
 
 
   Future<Map<String, dynamic>> getAllPool(String token) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+
     final response = await http.get(
       Uri.parse("$baseUrl/my-pools"),
       headers: {
@@ -54,6 +61,12 @@ class PoolService {
   }
 
   Future<Map<String, dynamic>> addPool(String token, Pool pool) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+    
     print(token);
 
     final imageBase64 = await _toBase64IfFilePath(pool.photoPool!.photoBassin);

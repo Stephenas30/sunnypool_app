@@ -57,15 +57,16 @@ class _MypiscineScreen extends State<MypiscineScreen> {
 
         if (pools['data'] is List) {
           for (final item in pools['data']) {
+            print(item); // Debug: Affiche chaque piscine récupérée
             fetchPool.add(
               Pool(
                 id: item['id']?.toString(),
                 name: item['titre'] ?? 'Piscine sans nom',
-                type: TypePool.beton,
+                type: TypePoolExtension.fromString(item['caracteristiques']['type']?.toString() ?? 'coque'),
                 dimension: Dimension(
-                  length: parseDouble(item['caracteristiques']?['length']),
-                  width: parseDouble(item['caracteristiques']?['width']),
-                  depth: parseDouble(item['caracteristiques']?['depth']),
+                  length: parseDouble(item['caracteristiques']?['longueur']),
+                  width: parseDouble(item['caracteristiques']?['largeur']),
+                  depth: parseDouble(item['caracteristiques']?['profondeur']),
                 ),
                 location: Location(
                   latitude: parseDouble(item['localisation']?['latitude']),
@@ -83,7 +84,6 @@ class _MypiscineScreen extends State<MypiscineScreen> {
 
         setState(() {
           piscines = fetchPool;
-          _isLoading = false;
         });
       }).catchError((error) {
           if (error is ApiException && error.statusCode == 401) {
@@ -100,10 +100,18 @@ class _MypiscineScreen extends State<MypiscineScreen> {
               );
             });
           }
+          else {
+            setState(() {
+              _errorMessage = 'Erreur lors du chargement des piscines : $error';
+            });
+          }
         });
     } catch (_) {
       setState(() {
         _errorMessage = 'Impossible de charger vos piscines pour le moment.';
+      });
+    } finally {
+      setState(() {
         _isLoading = false;
       });
     }
@@ -254,7 +262,7 @@ class _MypiscineScreen extends State<MypiscineScreen> {
 
   Widget _buildListPool(Pool pool) {
     final theme = Theme.of(context);
-    final typeLabel = pool.type.toString().split('.').last;
+    var typeLabel = pool.type.label; // Utilise l'extension pour obtenir le label lisible du type de piscine
 
     return Card(
       child: InkWell(

@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sunnypool_app/models/analyse_model.dart';
 import 'package:sunnypool_app/models/message_model.dart';
+import 'package:sunnypool_app/services/analyse_service.dart';
 import 'package:sunnypool_app/services/sunny_service.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
+import 'package:sunnypool_app/widget/pick_image.dart';
 import 'package:uuid/uuid.dart';
 import 'profile_screen.dart';
 
@@ -39,6 +43,9 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
   bool _isLoading = false;
   bool selectedAnalyse = false;
 
+  File? imageBandelette;
+
+  bool _displayOutput = false;
   String outputAnalyse = '';
 
   static const int _pollMaxAttempts = 25;
@@ -55,8 +62,7 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
     tacController.text = listAnalyse[2]['value'].toString();
     stabilisantController.text = listAnalyse[3]['value'].toString();
     tempController.text = listAnalyse[4]['value'].toString();
-      analyseChecked = null;
-  
+    analyseChecked = null;
   }
 
   @override
@@ -70,38 +76,78 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
   }
 
   _analyse() {
+    Map<String, String>? valueAnalyse;
     if (_isSubmitting) return;
 
     setState(() {
       _isSubmitting = true;
     });
 
-    Map<String, String> valueAnalyse = {
-      'ph': pHController.text,
-      'chlore': chloreController.text,
-      'tac': tacController.text,
-      'stabilisant': stabilisantController.text,
-      'temperature': tempController.text,
-    };
+    if (buttonSelected[0]) {
+      if (pHController.text.isEmpty ||
+          chloreController.text.isEmpty ||
+          tacController.text.isEmpty ||
+          stabilisantController.text.isEmpty ||
+          tempController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Veuillez remplir tous les champs')),
+        );
+        setState(() {
+          _isSubmitting = false;
+        });
+        return;
+      }
+
+      valueAnalyse = {
+        'ph': pHController.text,
+        'chlore': chloreController.text,
+        'tac': tacController.text,
+        'stabilisant': stabilisantController.text,
+        'temperature': tempController.text,
+      };
+    } else {
+      if (imageBandelette == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Veuillez prendre une photo de votre bandelette'),
+          ),
+        );
+        setState(() {
+          _isSubmitting = false;
+        });
+        return;
+      }
+    }
+
     print(valueAnalyse);
-    TokenStorage.getToken().then((tokenValue) {
+
+    print({
+      'analyse': valueAnalyse,
+      'photo_bandelette_base64': imageBandelette,
+    });
+
+    setState(() {
+      _isSubmitting = false;
+      _displayOutput = true;
+    });
+    /* TokenStorage.getToken().then((tokenValue) {
       if (sessionId == null) {
         setState(() {
           sessionId = uuid.v4();
         });
       }
-      SunnyService().sendChat(
-        tokenValue!,
-        sessionId!,
-        MessageModel(
-          message:
-              "Analyser mon eau à partir de ses mesures (ph, chlore, tac, stabilisant, temperature)",
-          analyse: valueAnalyse,
-        ),
-      ).then((response) async {
-        print(response);
-        _isLoading = true;
-        try {
+      AnalyseService()
+          .sendAnalyse(
+            tokenValue!,
+            AnalyseModel(
+              analyse: valueAnalyse,
+              photo_bandelette_base64: imageBandelette!
+            ),
+          )
+          .then((response) async {
+            print(response);
+            _isLoading = true;
+            try {
               if (response['response'] == "pending") {
                 setState(() {
                   _messages.add({
@@ -136,18 +182,20 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
               });
               print(_messages);
             }
-      }).catchError((onError){
-        if (!mounted) return;
-        print('Error $onError');
-      }).whenComplete((){
-        if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          analyseChecked = null;
-        });
-      }
-      });
-    });
+          })
+          .catchError((onError) {
+            if (!mounted) return;
+            print('Error $onError');
+          })
+          .whenComplete(() {
+            if (mounted) {
+              setState(() {
+                _isSubmitting = false;
+                analyseChecked = null;
+              });
+            }
+          });
+    }); */
   }
 
   Future<String> _pollUntilCompleted(
@@ -235,6 +283,9 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                           setState(() {
                             buttonSelected[0] = true;
                             buttonSelected[1] = false;
+                            analyseChecked = null;
+                            _displayOutput = false;
+                            imageBandelette = null;
                           });
                         },
                       ),
@@ -248,6 +299,8 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                           setState(() {
                             buttonSelected[0] = false;
                             buttonSelected[1] = true;
+                            analyseChecked = null;
+                            _displayOutput = false;
                           });
                         },
                       ),
@@ -256,18 +309,184 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: listAnalyse.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) =>
-                      _buildListAnalyse(listAnalyse[index]),
-                ),
-              ),
+              buttonSelected[0]
+                  ? Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'Entrez les valeurs de votre analyse de l\'eau',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: ListView.separated(
+                              itemCount: listAnalyse.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, index) =>
+                                  _buildListAnalyse(listAnalyse[index]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'Prenez une photo de votre bandelette pour analyser votre eau',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 20),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: 300,
+                              minHeight: 200,
+                              minWidth: double.infinity
+                            ),
+                            child: Card.filled(
+                              color: const Color(0xFF151515),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: BorderSide(
+                                  color: Colors.amber.withOpacity(0.25),
+                                ),
+                              ),
+                              child: Center(
+                                
+                                child: Stack(
+                                children: [
+                                  if (imageBandelette != null)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Image.file(
+                                        imageBandelette!,
+                                        width: screenWidth / 2,
+                                        height: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    Container(
+                                      width: screenWidth / 2,
+                                      height: double.infinity ,
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          PickImage pickImage = PickImage(
+                                            onImagePicked: (file) {
+                                              print(
+                                                'Image picked: ${file.path}',
+                                              );
+                                              setState(() {
+                                                imageBandelette = file;
+                                              });
+                                            },
+                                            context: context,
+                                          );
+                                          pickImage.showImageSourceSheet();
+                                        },
+                                        icon: Icon(
+                                          Icons.camera_alt_outlined,
+                                          size: 48,
+                                          color: Colors.amber,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              
+                              ),
+                              ),
+                            ),
+                            
+                          ),
+                        ],
+                      ),
+                    ),
+
               const SizedBox(height: 20),
-              outputAnalyse != '' ? Expanded(child: Container(
-                child: Text(outputAnalyse, textAlign: TextAlign.center,),
-              )): SizedBox.shrink(),
+              _displayOutput
+                  ? Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF151515),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.25),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Résultat de l\'analyse',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.amber,
+                            ),
+                          ),
+                          Stack(
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                height: 2,
+                                color: Colors.amber.withOpacity(0.25),
+                              ),
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                top: -6,
+                                child: Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                left: 320,
+                                top: -10,
+                                child: IconButton(
+                                  onPressed: () {},
+                                  icon: const Icon(Icons.copy),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(maxHeight: 150),
+                            child: SingleChildScrollView(
+                              child: Text(
+                                outputAnalyse,
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white70,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              /* Clipboard.setData(ClipboardData(text: outputAnalyse));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Résultat copié dans le presse-papier')),
+                      ); */
+                            },
+                            icon: const Icon(Icons.chat),
+                            label: const Text('Continuer la conversation'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SizedBox.shrink(),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -275,15 +494,15 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _isSubmitting ? null : _analyse,
                   icon: _isSubmitting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.black,
-                                  ),
-                                )
-                              : const Icon(Icons.check_circle),
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                      : const Icon(Icons.check_circle),
                   label: Text(
                     _isSubmitting ? 'Analysé...' : 'Analyser',
                     style: theme.textTheme.labelLarge?.copyWith(
@@ -320,19 +539,25 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
   }
 
   Widget _buildListAnalyse(Map<String, String> analyse) {
-      selectedAnalyse = analyseChecked == analyse;      
+    selectedAnalyse = analyseChecked == analyse;
+   
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Card(
       margin: EdgeInsets.zero,
+
       child: ListTile(
         onTap: () {
           setState(() {
             analyseChecked = analyse;
+            _displayOutput = false;
           });
         },
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         leading: Icon(
           selectedAnalyse ? Icons.check_circle : Icons.water_drop_outlined,
           color: selectedAnalyse ? Colors.amber : Colors.white70,
+          size: screenWidth * 0.03,
         ),
         title: Flex(
           direction: Axis.horizontal,
@@ -345,28 +570,64 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
               style: TextStyle(
                 color: selectedAnalyse ? Colors.amber : Colors.white,
                 fontWeight: FontWeight.w700,
+                fontSize: screenWidth * 0.03,
               ),
             ),
             selectedAnalyse
                 ? Expanded(
                     child: TextField(
                       controller: _controllerForAnalyseName(analyse['name']),
-                      decoration: InputDecoration(),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 3,
+                          horizontal: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.amber.withOpacity(0.25),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.amber,
+                          ),
+                        ),
+                        
+                      ),
                       autofocus: selectedAnalyse,
                       onSubmitted: (value) {
                         selectedAnalyse = false;
+                        //_displayOutput = false;
+                        analyseChecked = null;
                       },
+                      style: TextStyle(
+                        color: Colors.amber,
+                        fontSize: screenWidth * 0.03,
+                      ),
                     ),
                   )
                 : Expanded(
-                    child: Text(_controllerForAnalyseName(analyse['name']).text, textAlign: TextAlign.end),
+                    child: Text(
+                      _controllerForAnalyseName(analyse['name']).text,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        color: selectedAnalyse ? Colors.amber : Colors.white70,
+                        fontSize: screenWidth * 0.03,
+                      ),
+                    ),
                   ),
-            Text(analyse['unit']!),
+            Text(analyse['unit']!, style: TextStyle(
+              fontSize: screenWidth * 0.03,
+              color: selectedAnalyse ? Colors.amber : Colors.white70,
+            ),),
           ],
         ),
         trailing: Icon(
           Icons.arrow_forward_ios,
-          size: 16,
+          size: screenWidth * 0.03,
           color: selectedAnalyse ? Colors.amber : Colors.white54,
         ),
       ),

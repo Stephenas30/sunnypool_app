@@ -14,6 +14,7 @@ import 'package:sunnypool_app/services/product_service.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
 import 'package:sunnypool_app/utils/user_location.dart';
 import 'package:sunnypool_app/widget/custom_stepper.dart';
+import 'package:sunnypool_app/widget/pick_image.dart';
 
 class AddPiscineScreen extends StatefulWidget {
   final Function(Pool)? onAddPool;
@@ -265,7 +266,27 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   }
 
   Future<void> _takePhoto(String imageType) async {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+
+    PickImage(onImagePicked: (File photo) {
+      setState(() {
+        switch (imageType) {
+          case 'Vue d\'ensemble':
+            imageEnsemble = photo;
+            break;
+          case 'Eau de la piscine':
+            imageEau = photo;
+            break;
+          case 'Local technique':
+            imageLocal = photo;
+            break;
+          case 'Equipements':
+          imageEquipements = File(photo.path);
+          break;
+        }
+      });
+    }, context: context).showImageSourceSheet();
+
+    /* final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo == null) return;
 
     setState(() {
@@ -283,7 +304,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
           imageEquipements = File(photo.path);
           break;
       }
-    });
+    }); */
   }
 
   Future<void> _takePhotoProd(String imageType) async {
@@ -985,7 +1006,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                             controller: nbrSkimmersController,
                             label: 'Nombre de skimmers',
                             hint: 'Ex: 2',
-                            icon: Icons.water_damage_outlined,
+                            icon: Icons.rectangle_outlined,
                             keyboardType: TextInputType.number,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
@@ -1016,7 +1037,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: _fieldDecoration(
                     label: 'Prise balai',
-                    icon: Icons.cleaning_services,
+                    icon: Icons.radio_button_checked_rounded,
                   ),
                   items: const [
                     DropdownMenuItem(value: true, child: Text('Oui')),
@@ -1035,7 +1056,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: _fieldDecoration(
                     label: 'Bonde de fond',
-                    icon: Icons.downhill_skiing,
+                    icon: Icons.blur_circular,
                   ),
                   items: BondeFond.values
                       .map(

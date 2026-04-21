@@ -29,13 +29,29 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   String? sessionId = null;
   int? thread_id = null;
   bool _isLoading = false;
+  bool _isLoadingConversation = false;
+
+  bool longPressActive = false;
 
   bool activeWrap = false;
-
 
   File? image_pool;
 
   String? tokenValue;
+
+  String? selectedMessageId;
+
+  void showOptions(String id) {
+    setState(() {
+      selectedMessageId = id;
+    });
+  }
+
+  void hideOptions() {
+    setState(() {
+      selectedMessageId = null;
+    });
+  }
 
   static const _borderColor = Color(0x33FFD54F);
 
@@ -108,6 +124,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     setState(() {
       _getAIResponse(text, image_pool);
       _messages.add({
+        'id': uuid.v1(),
         'role': 'user',
         'text': text,
         'image': image_pool?.path ?? '',
@@ -146,6 +163,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       if (token == null || token.isEmpty) {
         setState(() {
           _messages.add({
+'id': uuid.v1(),
             'role': 'assistant',
             'text': 'Session expirée. Veuillez vous reconnecter.',
           });
@@ -192,6 +210,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               if (response['response'] == "pending") {
                 setState(() {
                   _messages.add({
+                    'id': uuid.v1(),
                     'role': 'assistant',
                     'text': 'En cours de traitement. Merci de patienter...',
                   });
@@ -207,6 +226,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
 
               setState(() {
                 _messages[_messages.length - 1] = {
+                  'id': uuid.v1(),
                   'role': 'assistant',
                   'text': finalResponse,
                 };
@@ -217,6 +237,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               if (!mounted) return;
               setState(() {
                 _messages.add({
+                  'id': uuid.v1(),
                   'role': 'assistant',
                   'text': 'Temps d\'attente dépassé. Merci de réessayer.',
                 });
@@ -228,6 +249,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           .catchError((error) {
             setState(() {
               _messages.add({
+                'id': uuid.v1(),
                 'role': 'assistant',
                 'text': 'Une erreur est survenue: $error',
               });
@@ -276,16 +298,41 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   }
 
   Future<void> _getAllConversation() async {
-    tokenValue = await TokenStorage.getToken();
-    String? poolId = await PoolIdStorage.getPoolId();
-    Map<String, dynamic> response = await SunnyService().getAllConversation(
-      tokenValue!,
-      int.tryParse(poolId!)!,
-    );
     setState(() {
-      listConversation = response['data'];
-      //print(listConversation);
+      _isLoadingConversation = true;
     });
+
+    try {
+      tokenValue = await TokenStorage.getToken();
+      String? poolId = await PoolIdStorage.getPoolId();
+      Map<String, dynamic> response = await SunnyService().getAllConversation(
+        tokenValue!,
+        int.tryParse(poolId!)!,
+      );
+
+      if (response['data'] == null) {
+        setState(() {
+          _isLoadingConversation = false;
+        });
+        return;
+      }
+
+      setState(() {
+        listConversation = response['data'];
+        //print(listConversation);
+      });
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors du chargement des conversations: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoadingConversation = false;
+      });
+    }
   }
 
   @override
@@ -366,7 +413,11 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               SizedBox(height: 10),
               Divider(),
               SizedBox(height: 10),
-              listConversation.isEmpty
+              _isLoadingConversation
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.amber),
+                    )
+                  : listConversation.isEmpty
                   ? Center(
                       child: Text(
                         'Aucune conversation disponible pour le moment.',
@@ -420,228 +471,302 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 8, top: 8),
-                child: IconButton(
-                  icon: const Icon(Icons.menu, color: Colors.amber),
-                  onPressed: () => {
-                    _getAllConversation(),
-                    scaffoldKey.currentState?.openDrawer()
-                  },
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: hideOptions, // tap en dehors => fermer
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 8),
+                  child: IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.amber),
+                    onPressed: () => {
+                      _getAllConversation(),
+                      scaffoldKey.currentState?.openDrawer(),
+                    },
+                  ),
                 ),
               ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: _messagesScrollController,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final msg = _messages[index];
-                  final isUser = msg['role'] == 'user';
-                  return Align(
-                    alignment: isUser
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: isUser
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      children: [
-                        if (msg['image'] != null && msg['image']!.isNotEmpty)
-                          Container(
-                            width: 100,
-                            height: 100,
-                            margin: const EdgeInsets.only(bottom: 6),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              image: DecorationImage(
-                                image: FileImage(File(msg['image']!)),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        Container(
-                          margin: const EdgeInsets.symmetric(vertical: 5),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          constraints: const BoxConstraints(maxWidth: 290),
-                          decoration: BoxDecoration(
-                            color: isUser
-                                ? Colors.amber
-                                : const Color(0xFF1D1D1D),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: isUser ? Colors.amber : Colors.white24,
-                            ),
-                          ),
-                          child: Text(
-                            msg['text']!,
-                            style: TextStyle(
-                              color: isUser ? Colors.black : Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: CircularProgressIndicator(color: Colors.amber),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 6, 10, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  image_pool != null
-                      ? Stack(
-                          children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _messagesScrollController,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = _messages[index];
+                    final id = msg['id']!;
+                    final isUser = msg['role'] == 'user';
+                    final isSelected = selectedMessageId == id;
+
+                    return Align(
+                      alignment: isUser
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Column(
+                        crossAxisAlignment: isUser
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
+                        children: [
+                          if (msg['image'] != null && msg['image']!.isNotEmpty)
                             Container(
-                              width: 50,
-                              height: 50,
-                              margin: const EdgeInsets.only(right: 8),
+                              width: 100,
+                              height: 100,
+                              margin: const EdgeInsets.only(bottom: 6),
                               decoration: BoxDecoration(
-                                //borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12),
                                 image: DecorationImage(
-                                  image: FileImage(image_pool!),
+                                  image: FileImage(File(msg['image']!)),
                                   fit: BoxFit.cover,
                                 ),
                               ),
                             ),
-                            Positioned(
-                              top: -4,
-                              right: -4,
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    image_pool = null;
-                                  });
-                                },
-                                child: const CircleAvatar(
-                                  radius: 10,
-                                  backgroundColor: Colors.black54,
-                                  child: Icon(
-                                    Icons.close,
-                                    size: 12,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : const SizedBox.shrink(),
-                  const SizedBox(height: 6),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      activeWrap ?
-                      Wrap(
-                        spacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.start,
-                        //alignment: WrapAlignment.spaceBetween,
-                        children: ['meteo', 'produits'].map((item) {
-                          //final selected = optionSendChecked.contains(item);
-                          return FilterChip(
-                            label: Text(
-                              item,
-                              style: TextStyle(fontSize: screenWidth * 0.02),
-                            ),
-                            selected: optionSend[item]!,
-                            selectedColor: Colors.amber,
-                            checkmarkColor: Colors.black,
-                            labelStyle: TextStyle(
-                              color: optionSend[item]!
-                                  ? Colors.black
-                                  : Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            side: const BorderSide(color: _borderColor),
-                            onSelected: (_) {
-                              setState(() {
-                                optionSend[item] = !optionSend[item]!;
-                              });
+                          GestureDetector(
+                            onLongPress: () => showOptions(id),
+                            onTap: () {
+                              if (isSelected) {
+                                hideOptions();
+                              } else {
+                                showOptions(id);
+                              }
                             },
-                          );
-                        }).toList(),
-                      ) :  SizedBox.shrink(),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _controller,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: InputDecoration(
-                                hintText: 'Tapez votre message...',
-                                hintStyle: const TextStyle(
-                                  color: Colors.white54,
-                                ),
-                                filled: true,
-                                fillColor: const Color(0xFF1A1A1A),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                  borderSide: const BorderSide(
-                                    color: Colors.amber,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isSelected) ...[
+                                  const SizedBox(width: 8),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        onPressed: () {
+                                          debugPrint('Répondre à $id');
+                                        },
+                                        icon: const Icon(Icons.reply),
+                                      ),
+                                      IconButton(
+                                        onPressed: () {
+                                          debugPrint('Copier $id');
+                                        },
+                                        icon: const Icon(Icons.copy),
+                                      ),
+                                      IconButton(
+                                        onPressed: () {
+                                          debugPrint('Supprimer $id');
+                                        },
+                                        icon: const Icon(Icons.delete),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 5,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 290,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isUser
+                                        ? Colors.amber
+                                        : const Color(0xFF1D1D1D),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isUser
+                                          ? Colors.amber
+                                          : Colors.white24,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    msg['text']!,
+                                    style: TextStyle(
+                                      color: isUser
+                                          ? Colors.black
+                                          : Colors.white,
+                                    ),
                                   ),
                                 ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                  borderSide: const BorderSide(
-                                    color: Colors.amber,
-                                  ),
-                                ),
-                                prefixIcon: IconButton(
-                                  icon: const Icon(
-                                    Icons.menu,
-                                    color: Colors.white54,
-                                  ),
-                                  onPressed: (){
-                                    setState(() {
-                                      activeWrap = !activeWrap;
-                                    });
-                                  },
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: const Icon(
-                                    Icons.add,
-                                    color: Colors.white54,
-                                  ),
-                                  onPressed: _showImageSourceSheet,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          CircleAvatar(
-                            backgroundColor: Colors.amber,
-                            child: IconButton(
-                              icon: const Icon(Icons.send, color: Colors.black),
-                              onPressed: () => _sendMessage(_controller.text),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: CircularProgressIndicator(color: Colors.amber),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    image_pool != null
+                        ? Stack(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  //borderRadius: BorderRadius.circular(12),
+                                  image: DecorationImage(
+                                    image: FileImage(image_pool!),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: -4,
+                                right: -4,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      image_pool = null;
+                                    });
+                                  },
+                                  child: const CircleAvatar(
+                                    radius: 10,
+                                    backgroundColor: Colors.black54,
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
+                    const SizedBox(height: 6),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        activeWrap
+                            ? Wrap(
+                                spacing: 0,
+                                direction: Axis.vertical,
+                                crossAxisAlignment: WrapCrossAlignment.start,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  Text(
+                                    'Options inclus :',
+                                    style: TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: screenWidth * 0.018,
+                                    ),
+                                  ),
+                                  ...['meteo', 'produits'].map((item) {
+                                    //final selected = optionSendChecked.contains(item);
+                                    return FilterChip(
+                                      label: Text(
+                                        item.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: screenWidth * 0.02,
+                                        ),
+                                      ),
+                                      selected: optionSend[item]!,
+                                      selectedColor: Colors.amber,
+                                      checkmarkColor: Colors.black,
+                                      labelStyle: TextStyle(
+                                        color: optionSend[item]!
+                                            ? Colors.black
+                                            : Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      side: const BorderSide(
+                                        color: _borderColor,
+                                      ),
+                                      onSelected: (_) {
+                                        setState(() {
+                                          optionSend[item] = !optionSend[item]!;
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                                ],
+                              )
+                            : SizedBox.shrink(),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _controller,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: InputDecoration(
+                                  hintText: 'Tapez votre message...',
+                                  hintStyle: const TextStyle(
+                                    color: Colors.white54,
+                                  ),
+                                  filled: true,
+                                  fillColor: const Color(0xFF1A1A1A),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: const BorderSide(
+                                      color: Colors.amber,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: const BorderSide(
+                                      color: Colors.amber,
+                                    ),
+                                  ),
+                                  prefixIcon: IconButton(
+                                    icon: const Icon(
+                                      Icons.menu,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        activeWrap = !activeWrap;
+                                      });
+                                    },
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(
+                                      Icons.add,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: _showImageSourceSheet,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            CircleAvatar(
+                              backgroundColor: Colors.amber,
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.send,
+                                  color: Colors.black,
+                                ),
+                                onPressed: () => _sendMessage(_controller.text),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -671,10 +796,12 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         final loadedMessages = <Map<String, String>>[];
         for (final item in data) {
           loadedMessages.add({
+            'id': uuid.v1(),
             'role': 'user',
             'text': (item['message'] ?? '').toString(),
           });
           loadedMessages.add({
+            'id': uuid.v1(),
             'role': 'assistant',
             'text': (item['response'] ?? '').toString(),
           });
@@ -688,7 +815,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         _scrollToBottom(animated: false);
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Flex(
           direction: Axis.horizontal,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -701,7 +828,22 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.amber),
+            IconButton.outlined(
+              style: ButtonStyle(
+                side: MaterialStateProperty.all(
+                  const BorderSide(color: Colors.amber),
+                ),
+                shape: MaterialStateProperty.all(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                padding: MaterialStateProperty.all(EdgeInsets.zero),
+
+              ),
+              padding: EdgeInsets.zero,
+              onPressed: (){}, icon: const Icon(Icons.more_vert, size: 18, color: Colors.amber)),
+            //const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.amber),
           ],
         ),
       ),
