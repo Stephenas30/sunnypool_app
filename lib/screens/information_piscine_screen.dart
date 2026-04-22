@@ -30,6 +30,7 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
   double? volumePool;
   List<String> traitementChecked = ['Chlore'];
   bool showTraitementError = false;
+  bool buttonDisabled = true; 
   final List<String> traitementOptions = const [
     'Chlore',
     'Brome',
@@ -58,6 +59,26 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
     depthController.dispose();
     super.dispose();
   }
+
+   void handleChangeForm(e){
+      if(
+        (typePool != widget.pool?.type) || 
+        /* (volumePool != widget.pool?.volume) ||  */
+        (nameController.text != widget.pool?.name) || 
+        (lengthController.text != widget.pool?.dimension.length.toString()) ||
+        (widthController.text != widget.pool?.dimension.width.toString()) ||
+        (depthController.text != widget.pool?.dimension.depth.toString()) /* ||
+        (traitementChecked != List<String>.from(widget.traitementChecked)) */
+      ){
+        setState(() {
+          buttonDisabled = false;
+        });
+      }else{
+        setState(() {
+          buttonDisabled = true;
+        });
+      }
+    }
 
   void onChangedVolume() {
     final length = _parsePositiveValue(lengthController.text);
@@ -220,7 +241,10 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
       style: const TextStyle(color: Colors.white),
       decoration: _inputDecoration(label: label, icon: icon, hint: label),
       validator: _validateDimension,
-      onChanged: (_) => onChangedVolume(),
+      onChanged: (_) => {
+        handleChangeForm(''),
+        onChangedVolume()
+      },
     );
   }
 
@@ -248,9 +272,10 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 620),
+                constraints: BoxConstraints(maxWidth: 620, minHeight: MediaQuery.of(context).size.height - 150),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -344,7 +369,7 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
                     Form(
                       key: _formKey,
                       autovalidateMode: AutovalidateMode.onUserInteraction,
-                      onChanged: () => setState(() {}),
+                      onChanged: () => handleChangeForm,
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -364,7 +389,8 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
                           children: [
                             TextFormField(
                               controller: nameController,
-                              readOnly: true,
+                              //readOnly: true,
+                              onChanged: handleChangeForm,
                               style: const TextStyle(color: Colors.white),
                               decoration: _inputDecoration(
                                 label: 'Nom de la piscine',
@@ -397,6 +423,7 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
                                 setState(() {
                                   typePool = value;
                                 });
+                                handleChangeForm(value);
                               },
                               validator: (value) {
                                 if (value == null) {
@@ -582,14 +609,14 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
                     ),
                     const SizedBox(height: 18),
                     ElevatedButton(
-                      onPressed: _onContinue,
+                      onPressed: ( isFormReady & !buttonDisabled) ? _onContinue : (){print('Disabled');},
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isFormReady
+                        backgroundColor: ( isFormReady & !buttonDisabled)
                             ? const Color(0xFFFFC54D)
-                            : const Color(0xFF8C7A46),
-                        foregroundColor: isFormReady
+                            : const Color.fromARGB(255, 182, 173, 173),
+                        foregroundColor: ( isFormReady & !buttonDisabled)
                             ? Colors.black
-                            : Colors.white70,
+                            : const Color.fromARGB(179, 193, 193, 193),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -597,14 +624,14 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
                         elevation: 2,
                       ),
                       child: const Text(
-                        'Continuer',
+                        'Modifier',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    /* const SizedBox(height: 10),
                     OutlinedButton(
                       onPressed: _onSkip,
                       style: OutlinedButton.styleFrom(
@@ -622,7 +649,7 @@ class _InformationPiscineScreenState extends State<InformationPiscineScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
+                    ), */
                   ],
                 ),
               ),

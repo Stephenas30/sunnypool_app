@@ -52,41 +52,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else {
       TokenStorage.getToken().then((tokenValue) {
         print(tokenValue);
-        PoolService().getAllPool(tokenValue.toString()).then((
-          Map<String, dynamic> pools,
-        ) {
+        PoolService()
+            .getAllPool(tokenValue.toString())
+            .then((Map<String, dynamic> pools) {
               PoolIdStorage.savePoolId(pools['data'][0]['id'].toString());
               print(pools['data'][0]['id'].toString());
               Pool pool = Pool(
                 id: pools['data'][0]['id'].toString(),
                 name: pools['data'][0]['titre'] ?? 'not name',
-                type:
+                type: TypePoolExtension.fromString(pools['data'][0]['caracteristiques']['type']?.toString() ?? 'coque'),
                     /* pools['data'][0]['caracteristiques']['type'] ?? */
-                    TypePool.beton,
+                    //TypePool.beton,
                 dimension: Dimension(
-              length: parseDouble(pools['data'][0]['caracteristiques']['longueur']),
-              width: parseDouble(pools['data'][0]['caracteristiques']['largeur']),
-              depth: parseDouble(pools['data'][0]['caracteristiques']['profondeur']),
+                  length: parseDouble(
+                    pools['data'][0]['caracteristiques']['longueur'],
+                  ),
+                  width: parseDouble(
+                    pools['data'][0]['caracteristiques']['largeur'],
+                  ),
+                  depth: parseDouble(
+                    pools['data'][0]['caracteristiques']['profondeur'],
+                  ),
                 ),
                 location: Location(
-              latitude: parseDouble(pools['data'][0]['localisation']['latitude']),
-              longitude: parseDouble(pools['data'][0]['localisation']['longitude']),
+                  latitude: parseDouble(
+                    pools['data'][0]['localisation']['latitude'],
+                  ),
+                  longitude: parseDouble(
+                    pools['data'][0]['localisation']['longitude'],
+                  ),
                 ),
                 photoPool: PhotoPool(
-                  photoBassin: pools['data'][0]['photos']?[0]?['url'] ?? 'assets/piscine.png',
-                  photoEnvironnement: pools['data'][0]['photos']?[0]?['full'] ?? '',
-                  photoLocalTechn: pools['data'][0]['photos']?[0]?['thumbnail'] ?? '',
+                  photoBassin:
+                      pools['data'][0]['photos']?[0]?['url'] ??
+                      'assets/piscine.png',
+                  photoEnvironnement:
+                      pools['data'][0]['photos']?[0]?['full'] ?? '',
+                  photoLocalTechn:
+                      pools['data'][0]['photos']?[0]?['thumbnail'] ?? '',
                 ),
               );
               setState(() {
                 checkPool = pool;
                 loading = false;
               });
-        }).catchError((error) {
+            })
+            .catchError((error) {
               if (error is ApiException && error.statusCode == 401) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                content: Text('Session expirée. Veuillez vous reconnecter.'),
+                    content: Text(
+                      'Session expirée. Veuillez vous reconnecter.',
+                    ),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -96,10 +113,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     MaterialPageRoute(builder: (_) => LoginScreen()),
                   );
                 });
-              }else{
+              } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                content: Text('Une erreur est survenue. $error'),
+                    content: Text('Une erreur est survenue. $error'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -116,8 +133,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     //checkPool = widget.pool ?? ;
     weatherFuture = getWeather(
-            checkPool!.location.latitude,
-            checkPool!.location.longitude,
+      checkPool!.location.latitude,
+      checkPool!.location.longitude,
     );
 
     timer = Timer.periodic(Duration(seconds: 30), (timer) {
@@ -259,7 +276,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             image: DecorationImage(
-                              image: NetworkImage(checkPool?.photoPool?.photoBassin ?? 'assets/piscine.png'),
+                              image: NetworkImage(
+                                checkPool?.photoPool?.photoBassin ??
+                                    'assets/piscine.png',
+                              ),
                               fit: BoxFit.cover,
                               colorFilter: ColorFilter.mode(
                                 Colors.black.withOpacity(0.1),
@@ -272,12 +292,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => 
-                                    InformationPiscineScreen(
-                                      pool: checkPool,
+                                  builder: (_) => InformationPiscineScreen(
+                                    pool: checkPool,
                                     traitementChecked: [traitement['product']],
-                                    ),
-                                  )
+                                  ),
+                                ),
                               );
                             },
                             style: ElevatedButton.styleFrom(
@@ -356,7 +375,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF1A1A1A),
                             borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.amber.withOpacity(0.15)),
+                            border: Border.all(
+                              color: Colors.amber.withOpacity(0.15),
+                            ),
                           ),
                           padding: EdgeInsets.all(16),
                           // margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -449,7 +470,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                          _buildContainerRow(Icons.message, "Parler à Sunny", ChatSunnyScreen()),
+                            _buildContainerRow(
+                              Icons.message,
+                              "Parler à Sunny",
+                              ChatSunnyScreen(),
+                            ),
                             _buildContainerRow(
                               Icons.add,
                               "Ajouter produit",
@@ -461,7 +486,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF1A1A1A),
                             borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.amber.withOpacity(0.15)),
+                            border: Border.all(
+                              color: Colors.amber.withOpacity(0.15),
+                            ),
                           ),
                           height: 350,
                           width: double.infinity,
@@ -520,7 +547,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                   ? maintenanceChecked.remove(
                                                       item,
                                                     )
-                                                : maintenanceChecked.add(item);
+                                                  : maintenanceChecked.add(
+                                                      item,
+                                                    );
                                             });
                                           },
                                         ),
@@ -585,7 +614,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildMenuItem(IconData icon, String title, [Widget? destination]) {
     return ListTile(
       leading: Icon(icon, color: Colors.amber),
-      title: Text(title, style: TextStyle(color: Colors.white.withOpacity(0.9))),
+      title: Text(
+        title,
+        style: TextStyle(color: Colors.white.withOpacity(0.9)),
+      ),
       onTap: () {
         /* Navigator.pop(context);
         ScaffoldMessenger.of(

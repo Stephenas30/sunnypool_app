@@ -17,6 +17,8 @@ class PhotosScreen extends StatefulWidget {
 
 class _PhotosScreenState extends State<PhotosScreen> {
   final ImagePicker _picker = ImagePicker();
+  final _surfaceSoftColor = Color(0xFF1E1E1E);
+  final _borderColor = Color(0x33FFD54F);
 
   File? image_ensemble;
   File? image_eau;
@@ -224,6 +226,8 @@ class _PhotosScreenState extends State<PhotosScreen> {
                 ),
                 child: GridView.count(
                   crossAxisCount: 2,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
                   children: [
                     _buildCardPhoto('Vue d\'ensemble', image_ensemble),
                     _buildCardPhoto('Eau de la piscine', image_eau),
@@ -357,7 +361,78 @@ class _PhotosScreenState extends State<PhotosScreen> {
     );
   }
 
-  Widget _buildCardPhoto(String title,File? image) {
+Widget _buildCardPhoto(String title, File? image) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _takePhoto(title),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _surfaceSoftColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(13),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      image != null
+                          ? Image.file(image, fit: BoxFit.cover)
+                          : Image.asset(
+                              'assets/piscine.png',
+                              fit: BoxFit.cover,
+                            ),
+                      Container(color: Colors.black.withValues(alpha: 0.35)),
+                      const Center(
+                        child: Icon(
+                          Icons.photo_camera,
+                          color: Colors.amber,
+                          size: 34,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      image != null ? 'Modifiée' : 'Ajouter',
+                      style: const TextStyle(color: Colors.amber, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /* Widget _buildCardPhoto(String title,File? image) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     return Padding(padding: EdgeInsets.all(8), 
@@ -436,5 +511,5 @@ class _PhotosScreenState extends State<PhotosScreen> {
       ),
     )
     );
-  }
+  } */
 }

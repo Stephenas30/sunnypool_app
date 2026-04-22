@@ -46,6 +46,7 @@ dependencies:
   flutter_image_compress: ^2.3.0
   connectivity_plus: ^6.0.5
   internet_connection_checker: ^3.0.1
+  syncfusion_flutter_calendar: ^29.1.33
 
 dev_dependencies:
   flutter_test:
