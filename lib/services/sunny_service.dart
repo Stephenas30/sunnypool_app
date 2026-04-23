@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
 import 'package:sunnypool_app/services/internet_service.dart';
 
 /* Future<XFile?> compressImage(String path) async {
@@ -190,4 +188,59 @@ class SunnyService {
       throw Exception("Erreur de connexion : \\${response.body}");
     }
   }
+
+  Future<Map<String, dynamic>> renameConversation(
+    String token,
+    int threadId,
+    String newTitle,
+  ) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+    final response = await http.put(
+      Uri.parse("$baseUrl/chat/threads/$threadId"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({
+        "title": newTitle,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception("Erreur de connexion : \\${response.body}");
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteConversation(
+    String token,
+    int threadId,
+  ) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+    final response = await http.delete(
+      Uri.parse("$baseUrl/chat/threads/$threadId"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception("Erreur de connexion : \\${response.body}");
+    }
+  }
+
 }

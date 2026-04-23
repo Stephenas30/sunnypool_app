@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:sunnypool_app/models/dossier_model.dart';
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
@@ -19,15 +21,45 @@ class ChatSunnyScreen extends StatefulWidget {
   State<ChatSunnyScreen> createState() => _ChatSunnyScreenState();
 }
 
+enum MenuEntry {
+  newMessage('Nouveau Message'),
+  renommer('Renommer'),
+  supprimer('Supprimer'),
+  dupliquer('Dupliquer');
+
+  const MenuEntry(this.label, [this.shortcut]);
+  final String label;
+  final MenuSerializableShortcut? shortcut;
+}
+
 class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _controller = TextEditingController();
+
+  final TextEditingController _folderNameController = TextEditingController();
+
   final ScrollController _messagesScrollController = ScrollController();
   final List<Map<String, String>> _messages = [];
   final uuid = Uuid();
   final ImagePicker _picker = ImagePicker();
+
+  Color get backgroundColor => _backgroundColor;
+  Color _backgroundColor = Colors.red;
+  set backgroundColor(Color value) {
+    if (_backgroundColor != value) {
+      setState(() {
+        _backgroundColor = value;
+      });
+    }
+  }
+
+  MenuEntry? _lastSelection;
+  final FocusNode _buttonFocusNode = FocusNode(debugLabel: 'Menu Button');
+
+
   String? sessionId = null;
   int? thread_id = null;
+
   bool _isLoading = false;
   bool _isLoadingConversation = false;
 
@@ -40,6 +72,33 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   String? tokenValue;
 
   String? selectedMessageId;
+
+  bool listDossierActive = false;
+
+  bool addFolder = false;
+
+  List<DossierModel> listDossiers = [
+    DossierModel(id: 'dossier1', name: 'Dossier 1'),
+    DossierModel(id: 'dossier2', name: 'Dossier 2'),
+  ];
+
+  DossierModel? selectedDossier;
+  DossierModel? renamedDossier;
+
+  void _handleNewFolder(String name) {
+    if (_folderNameController.text.trim().isEmpty) {
+      setState(() {
+        addFolder = false;
+      });
+      return;
+    }
+
+    setState(() {
+      listDossiers.add(DossierModel(id: uuid.v1(), name: name.trim()));
+      addFolder = false;
+      _folderNameController.clear();
+    });
+  }
 
   void showOptions(String id) {
     setState(() {
@@ -163,7 +222,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       if (token == null || token.isEmpty) {
         setState(() {
           _messages.add({
-'id': uuid.v1(),
+            'id': uuid.v1(),
             'role': 'assistant',
             'text': 'Session expirée. Veuillez vous reconnecter.',
           });
@@ -305,6 +364,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     try {
       tokenValue = await TokenStorage.getToken();
       String? poolId = await PoolIdStorage.getPoolId();
+
       Map<String, dynamic> response = await SunnyService().getAllConversation(
         tokenValue!,
         int.tryParse(poolId!)!,
@@ -339,14 +399,12 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    _getAllConversation();
+    //_getAllConversation();
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -378,87 +436,329 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       drawer: Drawer(
         backgroundColor: const Color(0xFF111111),
         child: SafeArea(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 20,
-                ),
-                decoration: const BoxDecoration(color: Color(0xFF1A1A1A)),
-                child: const Text(
-                  'Menu Sunny',
-                  style: TextStyle(
-                    color: Colors.amber,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.chat, color: Colors.amber),
-                title: const Text(
-                  'Nouveau message',
-                  style: TextStyle(color: Colors.white),
-                ),
-                onTap: () => {
-                  setState(() {
-                    sessionId = null;
-                    _messages.clear();
-                  }),
-                  Navigator.pop(context),
-                },
-              ),
-              SizedBox(height: 10),
-              Divider(),
-              SizedBox(height: 10),
-              _isLoadingConversation
-                  ? const Center(
-                      child: CircularProgressIndicator(color: Colors.amber),
-                    )
-                  : listConversation.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Aucune conversation disponible pour le moment.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white54,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : RefreshIndicator(
-                      color: Colors.amber,
-                      onRefresh: _getAllConversation,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxHeight: screenHeight * 0.8,
-                          //maxWidth: screenWidth * 0.4
-                        ),
-                        child: ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(
-                            parent: BouncingScrollPhysics(),
-                          ),
-                          itemCount: listConversation.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 10),
-                          itemBuilder: (context, index) =>
-                              _buildListConversation(listConversation[index]),
-                        ),
+          child: LayoutBuilder(
+            builder: (context, drawerConstraints) {
+              final maxDossiersHeight = drawerConstraints.maxHeight * 0.3;
+              return Column(
+                //padding: EdgeInsets.zero,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
+                    decoration: const BoxDecoration(color: Color(0xFF1A1A1A)),
+                    child: const Text(
+                      'Menu Sunny',
+                      style: TextStyle(
+                        color: Colors.amber,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-              /* ListTile(
-                leading: const Icon(Icons.person, color: Colors.amber),
-                title: const Text('Profil', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ProfileScreen()),
-                  );
-                },
-              ), */
-            ],
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.chat, color: Colors.amber),
+                    title: const Text(
+                      'Nouveau message',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: () => {
+                      setState(() {
+                        sessionId = null;
+                        _messages.clear();
+                        listDossierActive = false;
+                        selectedDossier = null;
+                      }),
+                      Navigator.pop(context),
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.folder, color: Colors.amber),
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Dossiers de conversation',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              addFolder = true;
+                              listDossierActive = true;
+                            });
+                          },
+                          icon: Icon(
+                            Icons.add,
+                            size: screenWidth * 0.05,
+                            color: Colors.blueGrey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    onTap: () => {
+                      if (listDossierActive)
+                        {
+                          if (selectedDossier != null) _getAllConversation(),
+
+                          setState(() {
+                            listDossierActive = false;
+                            selectedDossier = null;
+                          }),
+                        }
+                      else
+                        {
+                          setState(() {
+                            listDossierActive = true;
+                          }),
+                        },
+                    },
+                  ),
+                  !listDossierActive
+                      ? const SizedBox.shrink()
+                      : Flexible(
+                          fit: FlexFit.loose,
+                          child: listDossiers.isEmpty
+                              ? 
+                                addFolder ?
+                                          ListTile(
+                                            leading: const Icon(
+                                              Icons.folder,
+                                              color: Colors.grey,
+                                            ),
+                                            title: TextField(
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                              decoration: const InputDecoration(
+                                                hintText: 'Nouveau dossier',
+                                                hintStyle: TextStyle(
+                                                  color: Colors.white54,
+                                                ),
+                                                border: InputBorder.none,
+                                              ),
+                                              autofocus: addFolder,
+                                              controller: _folderNameController,
+                                              //onChanged: (e){_handleNewFolder(e);},
+                                              onSubmitted: (e) =>
+                                                  _handleNewFolder(e),
+                                            ),
+                                            onTap: () {
+                                              setState(() {
+                                                addFolder = false;
+                                              });
+                                            },
+                                          ) :
+                              Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Text(
+                                    'Aucun dossier pour le moment. Les conversations sont automatiquement sauvegardées.',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white54,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                )
+                              : ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: double.infinity,
+                                    maxHeight: maxDossiersHeight 
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 20),
+                                    child: ListView(
+                                      physics: const BouncingScrollPhysics(),
+                                      children: [
+                                        if (addFolder)
+                                          ListTile(
+                                            leading: const Icon(
+                                              Icons.folder,
+                                              color: Colors.grey,
+                                            ),
+                                            title: TextField(
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                              decoration: const InputDecoration(
+                                                hintText: 'Nouveau dossier',
+                                                hintStyle: TextStyle(
+                                                  color: Colors.white54,
+                                                ),
+                                                border: InputBorder.none,
+                                              ),
+                                              autofocus: addFolder,
+                                              controller: _folderNameController,
+                                              //onChanged: (e){_handleNewFolder(e);},
+                                              onSubmitted: (e) =>
+                                                  _handleNewFolder(e),
+                                            ),
+                                            onTap: () {
+                                              setState(() {
+                                                addFolder = false;
+                                              });
+                                            },
+                                          ),
+                                        ...listDossiers.map((dossier) {
+                                          return ListTile(
+                                            leading: selectedDossier == dossier
+                                                ? const Icon(
+                                                    Icons.folder_open,
+                                                    color: Colors.amber,
+                                                  )
+                                                : const Icon(
+                                                    Icons.folder,
+                                                    color: Colors.amber,
+                                                  ),
+                                            title: renamedDossier == dossier
+                                                ? /* SizedBox(
+                                      width: 150,
+                                      child:  */ TextField(
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                    ),
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          hintText:
+                                                              'Renommer le dossier',
+                                                          hintStyle: TextStyle(
+                                                            color:
+                                                                Colors.white54,
+                                                          ),
+                                                          border:
+                                                              InputBorder.none,
+                                                        ),
+                                                    autofocus: true,
+                                                    /* controller:
+                                            TextEditingController(text: dossier.name), */
+                                                    onSubmitted: (e) {
+                                                      setState(() {
+                                                        //dossier.name = e;
+                                                        renamedDossier = null;
+                                                      });
+                                                    },
+                                                    //),
+                                                  )
+                                                : Text(
+                                                    dossier.name,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style:
+                                                        selectedDossier ==
+                                                            dossier
+                                                        ? const TextStyle(
+                                                            color: Colors.amber,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          )
+                                                        : const TextStyle(
+                                                            color: Colors.white,
+                                                          ),
+                                                  ),
+                                            trailing: renamedDossier == dossier
+                                                ? null
+                                                : _buildMenu(dossier),
+                                            onTap: () {
+                                              if (selectedDossier == dossier) {
+                                                setState(() {
+                                                  selectedDossier = null;
+                                                });
+                                                _getAllConversation();
+                                                return;
+                                              }
+                                              setState(() {
+                                                selectedDossier = dossier;
+                                                listConversation = [];
+                                              });
+                                            },
+                                          );
+                                        }).toList(),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                        ),
+                  SizedBox(height: 10),
+                  Divider(),
+                  SizedBox(height: 10),
+                  Expanded(
+                    child: _isLoadingConversation
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.amber,
+                            ),
+                          )
+                        : listConversation.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                selectedDossier != null
+                                    ? Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 16,
+                                          right: 16,
+                                          bottom: 20,
+                                        ),
+                                        child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.amber,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              setState(() {
+                                                sessionId = null;
+                                                _messages.clear();
+                                                //listDossierActive = false;
+                                                //selectedDossier = null;
+                                              });
+                                              Navigator.pop(context);
+                                            });
+                                          },
+                                          child: Text(
+                                            'Nouveau message dans ${selectedDossier?.name}',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : SizedBox.shrink(),
+                                Text(
+                                  'Aucune conversation disponible pour le moment.',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white54,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            color: Colors.amber,
+                            onRefresh: _getAllConversation,
+                            child: ListView.separated(
+                              physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics(),
+                              ),
+                              itemCount: listConversation.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, index) =>
+                                  _buildListConversation(
+                                    listConversation[index],
+                                  ),
+                            ),
+                          ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -476,19 +776,40 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           onTap: hideOptions, // tap en dehors => fermer
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8, top: 8),
-                  child: IconButton(
-                    icon: const Icon(Icons.menu, color: Colors.amber),
-                    onPressed: () => {
-                      _getAllConversation(),
-                      scaffoldKey.currentState?.openDrawer(),
-                    },
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 8, top: 8),
+                      child: IconButton(
+                        icon: const Icon(Icons.menu, color: Colors.amber),
+                        onPressed: () => {
+                          if (selectedDossier == null) _getAllConversation(),
+                          scaffoldKey.currentState?.openDrawer(),
+                        },
+                      ),
+                    ),
                   ),
-                ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 20, top: 8),
+                      child: Text(
+                        selectedDossier != null
+                            ? selectedDossier!.name
+                            : 'Nouvelle conversation',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: screenWidth * 0.018,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+
               Expanded(
                 child: ListView.builder(
                   controller: _messagesScrollController,
@@ -839,14 +1160,97 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                   ),
                 ),
                 padding: MaterialStateProperty.all(EdgeInsets.zero),
-
               ),
               padding: EdgeInsets.zero,
-              onPressed: (){}, icon: const Icon(Icons.more_vert, size: 18, color: Colors.amber)),
+              onPressed: () {},
+              icon: const Icon(Icons.more_vert, size: 18, color: Colors.amber),
+            ),
             //const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.amber),
           ],
         ),
       ),
+    );
+  }
+
+  void _activate(MenuEntry selection, DossierModel dossier) {
+    setState(() {
+      _lastSelection = selection;
+    });
+
+    switch (selection) {
+      case MenuEntry.newMessage:
+        {
+          setState(() {
+            sessionId = null;
+            _messages.clear();
+            listDossierActive = true;
+            selectedDossier = dossier;
+          });
+          Navigator.pop(context);
+        }
+      /* case MenuEntry.ouvrir:
+        debugPrint('Ouvrir'); */
+      case MenuEntry.renommer:
+        setState(() {
+          renamedDossier = dossier;
+        });
+      //showingMessage = !showingMessage;
+      case MenuEntry.supprimer:
+        setState(() {
+          listDossiers.remove(
+            dossier
+          );
+        });
+      case MenuEntry.dupliquer:
+        setState(() {
+          listDossiers.add(
+            DossierModel(id: uuid.v1(), name: 'Copie: ${dossier.name}'),
+          );
+        });
+    }
+  }
+
+  Widget _buildMenu(DossierModel dossier) {
+    return MenuAnchor(
+      childFocusNode: _buttonFocusNode,
+      menuChildren: <Widget>[
+        MenuItemButton(
+          child: Text(MenuEntry.newMessage.label),
+          onPressed: () => _activate(MenuEntry.newMessage, dossier),
+        ),
+        MenuItemButton(
+          onPressed: () => _activate(MenuEntry.renommer, dossier),
+          //shortcut: MenuEntry.hideMessage.shortcut,
+          child: Text(MenuEntry.renommer.label),
+        ),
+        MenuItemButton(
+          onPressed: () => _activate(MenuEntry.supprimer, dossier),
+          //shortcut: MenuEntry.showMessage.shortcut,
+          child: Text(MenuEntry.supprimer.label),
+        ),
+        MenuItemButton(
+          onPressed: () => _activate(MenuEntry.dupliquer, dossier),
+          //shortcut: MenuEntry.showMessage.shortcut,
+          child: Text(MenuEntry.dupliquer.label),
+        ),
+      ],
+      builder:
+          (BuildContext context, MenuController controller, Widget? child) {
+            return IconButton(
+              focusNode: _buttonFocusNode,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+              visualDensity: VisualDensity.compact,
+              onPressed: () {
+                if (controller.isOpen) {
+                  controller.close();
+                } else {
+                  controller.open();
+                }
+              },
+              icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
+            );
+          },
     );
   }
 
