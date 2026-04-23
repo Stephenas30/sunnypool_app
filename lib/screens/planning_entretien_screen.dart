@@ -58,20 +58,270 @@ class _PlanningDataSource extends CalendarDataSource {
   _PlanningDataSource(List<Appointment> source) {
     appointments = source;
   }
+
+  void updateAppointments(List<Appointment> source) {
+    appointments = source;
+    notifyListeners(CalendarDataSourceAction.reset, source);
+  }
+}
+
+class _PlanningDraft {
+  _PlanningDraft({
+    required this.title,
+    required this.notes,
+    required this.startTime,
+    required this.endTime,
+    required this.color,
+  });
+
+  final String title;
+  final String notes;
+  final DateTime startTime;
+  final DateTime endTime;
+  final Color color;
+}
+
+class _AddPlanningBottomSheet extends StatefulWidget {
+  const _AddPlanningBottomSheet();
+
+  @override
+  State<_AddPlanningBottomSheet> createState() =>
+      _AddPlanningBottomSheetState();
+}
+
+class _AddPlanningBottomSheetState extends State<_AddPlanningBottomSheet> {
+  final _titleController = TextEditingController();
+  final _notesController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final DateFormat _fullDateFormat = DateFormat('dd/MM/yyyy', 'fr_FR');
+
+  late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
+  late int _durationInMinutes;
+  late Color _selectedColor;
+
+  bool _isDatePickerOpen = false;
+  bool _isTimePickerOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = DateTime.now();
+    _selectedTime = TimeOfDay.now();
+    _durationInMinutes = 60;
+    _selectedColor = Colors.amber.shade700;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    if (_isDatePickerOpen) {
+      return;
+    }
+    _isDatePickerOpen = true;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      locale: const Locale('fr', 'FR'),
+    );
+    _isDatePickerOpen = false;
+    if (!mounted || picked == null) {
+      return;
+    }
+    setState(() => _selectedDate = picked);
+  }
+
+  Future<void> _pickTime() async {
+    if (_isTimePickerOpen) {
+      return;
+    }
+    _isTimePickerOpen = true;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+    );
+    _isTimePickerOpen = false;
+    if (!mounted || picked == null) {
+      return;
+    }
+    setState(() => _selectedTime = picked);
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final startTime = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+    final endTime = startTime.add(Duration(minutes: _durationInMinutes));
+
+    Navigator.of(context).pop(
+      _PlanningDraft(
+        title: _titleController.text.trim(),
+        notes: _notesController.text.trim(),
+        startTime: startTime,
+        endTime: endTime,
+        color: _selectedColor,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Ajouter un planning',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _titleController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Titre de la tâche',
+                    hintText: 'Ex: Nettoyage du filtre',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Le titre est obligatoire';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _notesController,
+                  style: const TextStyle(color: Colors.white),
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes (optionnel)',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _pickDate,
+                        icon: const Icon(Icons.event),
+                        label: Text(_fullDateFormat.format(_selectedDate)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _pickTime,
+                        icon: const Icon(Icons.schedule),
+                        label: Text(_selectedTime.format(context)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  initialValue: _durationInMinutes,
+                  decoration: const InputDecoration(labelText: 'Durée'),
+                  items: const [
+                    DropdownMenuItem(value: 30, child: Text('30 minutes')),
+                    DropdownMenuItem(value: 45, child: Text('45 minutes')),
+                    DropdownMenuItem(value: 60, child: Text('1 heure')),
+                    DropdownMenuItem(value: 90, child: Text('1 heure 30')),
+                    DropdownMenuItem(value: 120, child: Text('2 heures')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() => _durationInMinutes = value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<Color>(
+                  initialValue: _selectedColor,
+                  decoration: const InputDecoration(
+                    labelText: 'Type / Couleur',
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: Colors.amber.shade700,
+                      child: const Text('Nettoyage'),
+                    ),
+                    DropdownMenuItem(
+                      value: Colors.lightBlue.shade600,
+                      child: const Text('Analyse de l\'eau'),
+                    ),
+                    DropdownMenuItem(
+                      value: Colors.green.shade600,
+                      child: const Text('Vérification équipement'),
+                    ),
+                    DropdownMenuItem(
+                      value: Colors.deepOrange.shade400,
+                      child: const Text('Traitement'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() => _selectedColor = value);
+                  },
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: _submit,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Ajouter au planning'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
   final List<_PlanningTask> _planningItems = [];
   final DateFormat _dayFormat = DateFormat('EEEE d MMMM', 'fr_FR');
   final DateFormat _hourFormat = DateFormat('HH:mm', 'fr_FR');
-  final DateFormat _fullDateFormat = DateFormat('dd/MM/yyyy', 'fr_FR');
+  late final _PlanningDataSource _planningDataSource;
 
   ButtonOption _buttonOption = ButtonOption.calendar;
+  bool _isAddSheetOpen = false;
+  int _taskSequence = 3;
 
   @override
   void initState() {
     super.initState();
     _seedPlanning();
+    _planningDataSource = _PlanningDataSource(_appointmentsFromPlanning());
   }
 
   void _seedPlanning() {
@@ -107,8 +357,8 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
     _planningItems.sort((a, b) => a.startTime.compareTo(b.startTime));
   }
 
-  CalendarDataSource _calendarSource() {
-    final appointments = _planningItems
+  List<Appointment> _appointmentsFromPlanning() {
+    return _planningItems
         .map(
           (item) => Appointment(
             id: item.id,
@@ -120,230 +370,58 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
           ),
         )
         .toList();
-    return _PlanningDataSource(appointments);
+  }
+
+  void _syncCalendarSource() {
+    _planningDataSource.updateAppointments(_appointmentsFromPlanning());
+  }
+
+  String _nextTaskId() {
+    _taskSequence += 1;
+    return 'task_${DateTime.now().microsecondsSinceEpoch}_$_taskSequence';
   }
 
   Future<void> _showAddPlanningSheet() async {
-    final titleController = TextEditingController();
-    final notesController = TextEditingController();
+    if (_isAddSheetOpen) {
+      return;
+    }
+    _isAddSheetOpen = true;
+    try {
+      final draft = await showModalBottomSheet<_PlanningDraft>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: const Color(0xFF121212),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) => const _AddPlanningBottomSheet(),
+      );
 
-    DateTime selectedDate = DateTime.now();
-    TimeOfDay selectedTime = TimeOfDay.now();
-    int durationInMinutes = 60;
-    Color selectedColor = Colors.amber.shade700;
+      if (!mounted || draft == null) {
+        return;
+      }
 
-    final formKey = GlobalKey<FormState>();
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF121212),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (BuildContext sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-            return SafeArea(
-              top: false,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
-                child: Form(
-                  key: formKey,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Ajouter un planning',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleLarge?.copyWith(color: Colors.white),
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: titleController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
-                            labelText: 'Titre de la tâche',
-                            hintText: 'Ex: Nettoyage du filtre',
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Le titre est obligatoire';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: notesController,
-                          style: const TextStyle(color: Colors.white),
-                          maxLines: 2,
-                          decoration: const InputDecoration(
-                            labelText: 'Notes (optionnel)',
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  final picked = await showDatePicker(
-                                    context: context,
-                                    initialDate: selectedDate,
-                                    firstDate: DateTime.now().subtract(
-                                      const Duration(days: 365),
-                                    ),
-                                    lastDate: DateTime.now().add(
-                                      const Duration(days: 365 * 2),
-                                    ),
-                                    locale: const Locale('fr', 'FR'),
-                                  );
-                                  if (picked != null) {
-                                    setModalState(() => selectedDate = picked);
-                                  }
-                                },
-                                icon: const Icon(Icons.event),
-                                label: Text(
-                                  _fullDateFormat.format(selectedDate),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  final picked = await showTimePicker(
-                                    context: context,
-                                    initialTime: selectedTime,
-                                  );
-                                  if (picked != null) {
-                                    setModalState(() => selectedTime = picked);
-                                  }
-                                },
-                                icon: const Icon(Icons.schedule),
-                                label: Text(selectedTime.format(context)),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<int>(
-                          initialValue: durationInMinutes,
-                          decoration: const InputDecoration(labelText: 'Durée'),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 30,
-                              child: Text('30 minutes'),
-                            ),
-                            DropdownMenuItem(
-                              value: 45,
-                              child: Text('45 minutes'),
-                            ),
-                            DropdownMenuItem(value: 60, child: Text('1 heure')),
-                            DropdownMenuItem(
-                              value: 90,
-                              child: Text('1 heure 30'),
-                            ),
-                            DropdownMenuItem(
-                              value: 120,
-                              child: Text('2 heures'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setModalState(() => durationInMinutes = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<Color>(
-                          initialValue: selectedColor,
-                          decoration: const InputDecoration(
-                            labelText: 'Type / Couleur',
-                          ),
-                          items: [
-                            DropdownMenuItem(
-                              value: Colors.amber.shade700,
-                              child: const Text('Nettoyage'),
-                            ),
-                            DropdownMenuItem(
-                              value: Colors.lightBlue.shade600,
-                              child: const Text('Analyse de l\'eau'),
-                            ),
-                            DropdownMenuItem(
-                              value: Colors.green.shade600,
-                              child: const Text('Vérification équipement'),
-                            ),
-                            DropdownMenuItem(
-                              value: Colors.deepOrange.shade400,
-                              child: const Text('Traitement'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setModalState(() => selectedColor = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            if (!formKey.currentState!.validate()) {
-                              return;
-                            }
-                            final startTime = DateTime(
-                              selectedDate.year,
-                              selectedDate.month,
-                              selectedDate.day,
-                              selectedTime.hour,
-                              selectedTime.minute,
-                            );
-                            final endTime = startTime.add(
-                              Duration(minutes: durationInMinutes),
-                            );
-
-                            setState(() {
-                              _planningItems.add(
-                                _PlanningTask(
-                                  id: 'task_${DateTime.now().millisecondsSinceEpoch}',
-                                  title: titleController.text.trim(),
-                                  notes: notesController.text.trim(),
-                                  startTime: startTime,
-                                  endTime: endTime,
-                                  color: selectedColor,
-                                ),
-                              );
-                              _sortPlanning();
-                            });
-
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(this.context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Planning ajouté avec succès'),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.add),
-                          label: const Text('Ajouter au planning'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
+      setState(() {
+        _planningItems.add(
+          _PlanningTask(
+            id: _nextTaskId(),
+            title: draft.title,
+            notes: draft.notes,
+            startTime: draft.startTime,
+            endTime: draft.endTime,
+            color: draft.color,
+          ),
         );
-      },
-    );
+        _sortPlanning();
+        _syncCalendarSource();
+      });
 
-    titleController.dispose();
-    notesController.dispose();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Planning ajouté avec succès')),
+      );
+    } finally {
+      _isAddSheetOpen = false;
+    }
   }
 
   void _toggleDone(String id) {
@@ -354,12 +432,14 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
     setState(() {
       final item = _planningItems[index];
       _planningItems[index] = item.copyWith(isDone: !item.isDone);
+      _syncCalendarSource();
     });
   }
 
   void _removePlanning(String id) {
     setState(() {
       _planningItems.removeWhere((item) => item.id == id);
+      _syncCalendarSource();
     });
   }
 
@@ -538,36 +618,19 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
       child: SfCalendar(
         view: CalendarView.month,
         firstDayOfWeek: 1,
-        showDatePickerButton: true,
+        // Workaround: avoid SfCalendar internal date-picker route lifecycle
+        // issues that can trigger duplicate key/element assertions.
+        showDatePickerButton: false,
         showNavigationArrow: true,
         monthViewSettings: const MonthViewSettings(
-          appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+          // Better stability with multiple events on the same day.
+          appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
           showAgenda: true,
           agendaViewHeight: 180,
         ),
         todayHighlightColor: Colors.amber,
-        dataSource: _calendarSource(),
+        dataSource: _planningDataSource,
         onTap: _onCalendarTap,
-        appointmentBuilder: (context, details) {
-          final appointment = details.appointments.first as Appointment;
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: appointment.color,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              appointment.subject,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          );
-        },
       ),
     );
   }

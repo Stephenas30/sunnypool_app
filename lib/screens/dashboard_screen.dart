@@ -619,21 +619,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         style: TextStyle(color: Colors.white.withOpacity(0.9)),
       ),
       onTap: () {
-        /* Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Ouverture: $title"))); */
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                destination ??
-                Scaffold(
-                  appBar: AppBar(title: Text(title)),
-                  body: Center(child: Text("Page $title en construction")),
-                ),
-          ),
-        );
+        Navigator.pop(context);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  destination ??
+                  Scaffold(
+                    appBar: AppBar(title: Text(title)),
+                    body: Center(child: Text("Page $title en construction")),
+                  ),
+            ),
+          );
+        });
       },
     );
   }
