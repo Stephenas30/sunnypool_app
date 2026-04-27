@@ -44,9 +44,9 @@ class SunnyService {
       throw ('Aucune connexion Internet');
     }
 
-    print(thread_id);
+    //print(thread_id);
 
-    thread_id ??= sessionId;
+    //thread_id ??= sessionId;
 
     final photoBase64 = await _toBase64IfFilePath(message.image);
 
@@ -200,13 +200,42 @@ class SunnyService {
       throw ('Aucune connexion Internet');
     }
     final response = await http.put(
-      Uri.parse("$baseUrl/chat/threads/$threadId"),
+      Uri.parse("$baseUrl/chat/threads/$threadId/rename"),
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
       },
       body: jsonEncode({
         "title": newTitle,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception("Erreur de connexion : \\${response.body}");
+    }
+  }
+
+  Future<Map<String, dynamic>> favoriteConversation(
+    String token,
+    int threadId,
+    bool favorite,
+  ) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+    final response = await http.put(
+      Uri.parse("$baseUrl/chat/threads/$threadId/favorite"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({
+        "favorites": favorite,
       }),
     );
 

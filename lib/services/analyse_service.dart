@@ -50,6 +50,34 @@ class AnalyseService {
       }),
     );
 
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception("Erreur de connexion : \\${response.body}");
+    }
+  }
+
+
+  Future<Map<String, dynamic>> responseAnalyse(
+    String token,
+    String analyseId,
+  ) async {
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+    print(analyseId);
+    
+    final response = await http.get(
+      Uri.parse("$baseUrl/analyse/poll?analyse_id=$analyseId"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      }
+    );
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data;
@@ -57,6 +85,7 @@ class AnalyseService {
       throw Exception("Erreur de connexion : \\${response.body}");
     }
   }
+
 
   Future<Map<String, dynamic>> getAllAnalyse(
     String token,

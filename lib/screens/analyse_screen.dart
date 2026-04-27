@@ -7,6 +7,7 @@ import 'package:sunnypool_app/models/analyse_model.dart';
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:sunnypool_app/services/analyse_service.dart';
 import 'package:sunnypool_app/services/sunny_service.dart';
+import 'package:sunnypool_app/utils/poolId_storage.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
 import 'package:sunnypool_app/widget/pick_image.dart';
 import 'package:uuid/uuid.dart';
@@ -51,7 +52,7 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
   static const int _pollMaxAttempts = 25;
   static const Duration _pollInterval = Duration(seconds: 2);
 
-  final List<Map<String, String>> _messages = [];
+  String? _messages;
 
   @override
   void initState() {
@@ -121,66 +122,50 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
 
     print(valueAnalyse);
 
-    print({
-      'analyse': valueAnalyse,
-      'photo_bandelette_base64': imageBandelette,
-    });
-
-    setState(() {
-      _isSubmitting = false;
-      _displayOutput = true;
-    });
-    /* TokenStorage.getToken().then((tokenValue) {
+    TokenStorage.getToken().then((tokenValue) async {
       if (sessionId == null) {
         setState(() {
           sessionId = uuid.v4();
         });
       }
+
+      var pool_id = await PoolIdStorage.getPoolId();
+
       AnalyseService()
           .sendAnalyse(
             tokenValue!,
             AnalyseModel(
+              pool_id: int.tryParse(pool_id!),
               analyse: valueAnalyse,
-              photo_bandelette_base64: imageBandelette!
+              photo_bandelette_base64: imageBandelette,
             ),
           )
           .then((response) async {
             print(response);
             _isLoading = true;
             try {
-              if (response['response'] == "pending") {
-                setState(() {
-                  _messages.add({
-                    'role': 'assistant',
-                    'text': 'En cours de traitement. Merci de patienter...',
-                  });
-                  _isLoading = false;
-                });
+              if (response['status'] == "pending") {
+                print('En cours de traitement. Merci de patienter...');
               }
+
               final finalResponse = await _pollUntilCompleted(
                 tokenValue,
-                response['conversation_id'],
+                response['analyse_id'],
               );
               if (!mounted) return;
 
+              print(finalResponse);
               setState(() {
-                _messages[_messages.length - 1] = {
-                  'role': 'assistant',
-                  'text': finalResponse,
-                };
-                _isLoading = false;
+                _displayOutput = true;
                 outputAnalyse = finalResponse;
               });
             } catch (error) {
               if (!mounted) return;
+              print('Temps d\'attente dépassé. Merci de réessayer. $error');
               setState(() {
-                _messages.add({
-                  'role': 'assistant',
-                  'text': 'Temps d\'attente dépassé. Merci de réessayer.',
-                });
-                _isLoading = false;
+                _displayOutput = true;
+                outputAnalyse = 'Temps d\'attente dépassé. Merci de réessayer.';
               });
-              print(_messages);
             }
           })
           .catchError((onError) {
@@ -194,16 +179,19 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                 analyseChecked = null;
               });
             }
+            setState(() {
+              _isLoading = false;
+            });
           });
-    }); */
+    });
   }
 
   Future<String> _pollUntilCompleted(
     String token,
-    String conversationId,
+    String analyse_id,
   ) async {
     for (int attempt = 0; attempt < _pollMaxAttempts; attempt++) {
-      final res = await SunnyService().responseChat(token, conversationId);
+      final res = await AnalyseService().responseAnalyse(token, analyse_id);
       print(res);
       final found = res['found'] == true;
 
@@ -342,7 +330,7 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                             constraints: BoxConstraints(
                               maxHeight: 300,
                               minHeight: 200,
-                              minWidth: double.infinity
+                              minWidth: double.infinity,
                             ),
                             child: Card.filled(
                               color: const Color(0xFF151515),
@@ -353,22 +341,21 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                                 ),
                               ),
                               child: Center(
-                                
                                 child: Stack(
-                                children: [
-                                  if (imageBandelette != null)
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Image.file(
-                                        imageBandelette!,
-                                        width: screenWidth / 2,
-                                        height: double.infinity,
-                                        fit: BoxFit.cover,
+                                  children: [
+                                    if (imageBandelette != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Image.file(
+                                          imageBandelette!,
+                                          width: screenWidth / 2,
+                                          height: double.infinity,
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
-                                    ),
                                     Container(
                                       width: screenWidth / 2,
-                                      height: double.infinity ,
+                                      height: double.infinity,
                                       decoration: BoxDecoration(
                                         color: Colors.amber.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(20),
@@ -395,12 +382,10 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                                         ),
                                       ),
                                     ),
-                                ],
-                              
-                              ),
+                                  ],
+                                ),
                               ),
                             ),
-                            
                           ),
                         ],
                       ),
@@ -410,7 +395,7 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
               _displayOutput
                   ? Container(
                       alignment: Alignment.center,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: const Color(0xFF151515),
                         borderRadius: BorderRadius.circular(20),
@@ -464,10 +449,10 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                             child: SingleChildScrollView(
                               child: Text(
                                 outputAnalyse,
-                                textAlign: TextAlign.center,
+                                textAlign: TextAlign.center, 
                                 style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: Colors.white70,
-                                  fontSize: 10,
+                                  color: Colors.white70,                   
+                                  //fontSize: 10,
                                 ),
                               ),
                             ),
@@ -540,7 +525,7 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
 
   Widget _buildListAnalyse(Map<String, String> analyse) {
     selectedAnalyse = analyseChecked == analyse;
-   
+
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Card(
@@ -591,11 +576,8 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Colors.amber,
-                          ),
+                          borderSide: BorderSide(color: Colors.amber),
                         ),
-                        
                       ),
                       autofocus: selectedAnalyse,
                       onSubmitted: (value) {
@@ -619,10 +601,13 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                       ),
                     ),
                   ),
-            Text(analyse['unit']!, style: TextStyle(
-              fontSize: screenWidth * 0.03,
-              color: selectedAnalyse ? Colors.amber : Colors.white70,
-            ),),
+            Text(
+              analyse['unit']!,
+              style: TextStyle(
+                fontSize: screenWidth * 0.03,
+                color: selectedAnalyse ? Colors.amber : Colors.white70,
+              ),
+            ),
           ],
         ),
         trailing: Icon(

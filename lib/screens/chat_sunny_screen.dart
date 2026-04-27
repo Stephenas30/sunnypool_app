@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:sunnypool_app/models/conversation_model.dart';
 import 'package:sunnypool_app/models/dossier_model.dart';
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:sunnypool_app/screens/login_screen.dart';
@@ -14,15 +13,11 @@ import 'package:sunnypool_app/utils/token_storage.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 
-class ChatSunnyScreen extends StatefulWidget {
-  const ChatSunnyScreen({Key? key}) : super(key: key);
-
-  @override
-  State<ChatSunnyScreen> createState() => _ChatSunnyScreenState();
-}
+final uuid = Uuid();
 
 enum MenuEntry {
   newMessage('Nouveau Message'),
+  discussion('Continuer la discussion'),
   renommer('Renommer'),
   supprimer('Supprimer'),
   dupliquer('Dupliquer');
@@ -32,38 +27,33 @@ enum MenuEntry {
   final MenuSerializableShortcut? shortcut;
 }
 
-class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
-  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
-  final TextEditingController _controller = TextEditingController();
+class ChatSunnyScreen extends StatefulWidget {
+  const ChatSunnyScreen({Key? key}) : super(key: key);
 
-  final TextEditingController _folderNameController = TextEditingController();
+  @override
+  State<ChatSunnyScreen> createState() => _ChatSunnyScreenState();
+}
+
+class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
+  //Variable Principale
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
   final ScrollController _messagesScrollController = ScrollController();
-  final List<Map<String, String>> _messages = [];
-  final uuid = Uuid();
+  final TextEditingController _messageController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  final List<Map<String, String>> _messages = [];
 
-  Color get backgroundColor => _backgroundColor;
-  Color _backgroundColor = Colors.red;
-  set backgroundColor(Color value) {
-    if (_backgroundColor != value) {
-      setState(() {
-        _backgroundColor = value;
-      });
-    }
-  }
+  //Variable Drawer
+  final TextEditingController _folderNameController = TextEditingController();
 
-  MenuEntry? _lastSelection;
   final FocusNode _buttonFocusNode = FocusNode(debugLabel: 'Menu Button');
-
+  MenuEntry? _lastSelection;
 
   String? sessionId = null;
   int? thread_id = null;
 
   bool _isLoading = false;
   bool _isLoadingConversation = false;
-
-  bool longPressActive = false;
 
   bool activeWrap = false;
 
@@ -84,6 +74,8 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
 
   DossierModel? selectedDossier;
   DossierModel? renamedDossier;
+
+  ConversationModel? renamedConversation;
 
   void _handleNewFolder(String name) {
     if (_folderNameController.text.trim().isEmpty) {
@@ -117,7 +109,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   static const int _pollMaxAttempts = 25;
   static const Duration _pollInterval = Duration(seconds: 2);
 
-  List<dynamic> listConversation = [];
+  List<ConversationModel> listConversation = [];
 
   Map<String, bool> optionSend = {
     'meteo': false,
@@ -126,6 +118,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     'alertes': true,
     'planning': true,
     'coordonnees': true,
+    'mesure de l\'eau': false,
   };
 
   Future<void> _pickImage(ImageSource source) async {
@@ -180,10 +173,13 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   void _sendMessage(String text) {
     if (text.isEmpty && image_pool == null) return;
 
+    var genSession = uuid.v4();
+
     setState(() {
       _getAIResponse(text, image_pool);
+      sessionId = genSession;
       _messages.add({
-        'id': uuid.v1(),
+        'id': genSession,
         'role': 'user',
         'text': text,
         'image': image_pool?.path ?? '',
@@ -192,7 +188,36 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       image_pool = null;
     });
     _scrollToBottom();
-    _controller.clear();
+    _messageController.clear();
+  }
+
+  void handleFavorite(ConversationModel conversation) async {
+    var token = await TokenStorage.getToken();
+
+    try{
+      var response = await SunnyService().favoriteConversation(token!, int.tryParse(conversation.id!)! , conversation.favories);
+
+      print(response);
+      conversation.favories = response['data']['favorites'];
+
+      ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(conversation.favories ? 'Classer en favorie' : 'N\'est plus votre favorie'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+    }catch(error){
+      ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Une erreur à survenue'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+
+              conversation.favories = !conversation.favories;
+      print(error);
+    }
+
   }
 
   void _scrollToBottom({bool animated = true}) {
@@ -212,12 +237,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   }
 
   void _getAIResponse(String userMessage, File? image) {
-    if (sessionId == null) {
-      setState(() {
-        sessionId = uuid.v4();
-      });
-    }
-    print(sessionId);
+    //print(sessionId);
     TokenStorage.getToken().then((token) {
       if (token == null || token.isEmpty) {
         setState(() {
@@ -231,10 +251,6 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         _scrollToBottom();
         return;
       }
-      /*       setState(() {
-              _messages.add({'role': 'assistant', 'text': "Réponse en cours..."});
-              _isLoading = false;
-            }); */
       SunnyService()
           .sendChat(
             token,
@@ -247,25 +263,8 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
             thread_id,
           )
           .then((response) async {
-            /* final responseChat = (response['output'] ?? '').toString();
-            if (responseChat.isEmpty) {
-              setState(() {
-                _messages[_messages.length - 1] = {
-                  'role': 'assistant',
-                  'text': 'Conversation invalide. Merci de réessayer.',
-                };
-                _isLoading = false;
-              });
-              return;
-            }
-
-            setState(() {
-              _messages.add({'role': 'assistant', 'text': responseChat});
-              _isLoading = false;
-            }); */
-            print(response);
-
             try {
+              print(response);
               if (response['response'] == "pending") {
                 setState(() {
                   _messages.add({
@@ -274,6 +273,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                     'text': 'En cours de traitement. Merci de patienter...',
                   });
                   _isLoading = false;
+                  thread_id ??= thread_id = response['thread_id'];
                 });
                 _scrollToBottom();
               }
@@ -377,9 +377,20 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         return;
       }
 
+      List<ConversationModel> conversations = [];
+
+      if (response['data'] is List) {
+        print(response['data'][0]);
+        for (final item in response['data']) {
+          conversations.add(
+            ConversationModel(id: item['id'].toString(), title: item['title'], favories: item['favorites']),
+          );
+        }
+      }
+
+      print(conversations);
       setState(() {
-        listConversation = response['data'];
-        //print(listConversation);
+        listConversation = conversations;
       });
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -393,6 +404,41 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         _isLoadingConversation = false;
       });
     }
+  }
+
+  Future<void> _renamedConversation(
+    ConversationModel conversation,
+    String newTitle,
+  ) async {
+    final token = await TokenStorage.getToken();
+
+    await SunnyService()
+        .renameConversation(token!, int.tryParse(conversation.id!)!, newTitle)
+        .then((onValue) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(onValue['message']),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _getAllConversation();
+        });
+  }
+
+  Future<void> _deletedConversation(ConversationModel conversation) async {
+    final token = await TokenStorage.getToken();
+
+    await SunnyService()
+        .deleteConversation(token!, int.tryParse(conversation.id!)!)
+        .then((onValue) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(onValue['message']),
+              backgroundColor: Colors.green,
+            ),
+          );
+          _getAllConversation();
+        });
   }
 
   @override
@@ -467,6 +513,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                     onTap: () => {
                       setState(() {
                         sessionId = null;
+                        thread_id = null;
                         _messages.clear();
                         listDossierActive = false;
                         selectedDossier = null;
@@ -521,52 +568,50 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                       : Flexible(
                           fit: FlexFit.loose,
                           child: listDossiers.isEmpty
-                              ? 
-                                addFolder ?
-                                          ListTile(
-                                            leading: const Icon(
-                                              Icons.folder,
-                                              color: Colors.grey,
+                              ? addFolder
+                                    ? ListTile(
+                                        leading: const Icon(
+                                          Icons.folder,
+                                          color: Colors.grey,
+                                        ),
+                                        title: TextField(
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                          decoration: const InputDecoration(
+                                            hintText: 'Nouveau dossier',
+                                            hintStyle: TextStyle(
+                                              color: Colors.white54,
                                             ),
-                                            title: TextField(
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                              decoration: const InputDecoration(
-                                                hintText: 'Nouveau dossier',
-                                                hintStyle: TextStyle(
-                                                  color: Colors.white54,
-                                                ),
-                                                border: InputBorder.none,
-                                              ),
-                                              autofocus: addFolder,
-                                              controller: _folderNameController,
-                                              //onChanged: (e){_handleNewFolder(e);},
-                                              onSubmitted: (e) =>
-                                                  _handleNewFolder(e),
-                                            ),
-                                            onTap: () {
-                                              setState(() {
-                                                addFolder = false;
-                                              });
-                                            },
-                                          ) :
-                              Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Text(
-                                    'Aucun dossier pour le moment. Les conversations sont automatiquement sauvegardées.',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: Colors.white54,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                )
+                                            border: InputBorder.none,
+                                          ),
+                                          autofocus: addFolder,
+                                          controller: _folderNameController,
+                                          //onChanged: (e){_handleNewFolder(e);},
+                                          onSubmitted: (e) =>
+                                              _handleNewFolder(e),
+                                        ),
+                                        onTap: () {
+                                          setState(() {
+                                            addFolder = false;
+                                          });
+                                        },
+                                      )
+                                    : Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        child: Text(
+                                          'Aucun dossier pour le moment. Les conversations sont automatiquement sauvegardées.',
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(color: Colors.white54),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      )
                               : ConstrainedBox(
                                   constraints: BoxConstraints(
                                     maxWidth: double.infinity,
-                                    maxHeight: maxDossiersHeight 
+                                    maxHeight: maxDossiersHeight,
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.only(left: 20),
@@ -661,7 +706,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                                   ),
                                             trailing: renamedDossier == dossier
                                                 ? null
-                                                : _buildMenu(dossier),
+                                                : _buildMenuDossier(dossier),
                                             onTap: () {
                                               if (selectedDossier == dossier) {
                                                 setState(() {
@@ -990,7 +1035,11 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                       fontSize: screenWidth * 0.018,
                                     ),
                                   ),
-                                  ...['meteo', 'produits'].map((item) {
+                                  ...[
+                                    'meteo',
+                                    'produits',
+                                    'mesure de l\'eau',
+                                  ].map((item) {
                                     //final selected = optionSendChecked.contains(item);
                                     return FilterChip(
                                       label: Text(
@@ -1026,7 +1075,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                           children: [
                             Expanded(
                               child: TextField(
-                                controller: _controller,
+                                controller: _messageController,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
                                   hintText: 'Tapez votre message...',
@@ -1076,7 +1125,8 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                   Icons.send,
                                   color: Colors.black,
                                 ),
-                                onPressed: () => _sendMessage(_controller.text),
+                                onPressed: () =>
+                                    _sendMessage(_messageController.text),
                               ),
                             ),
                           ],
@@ -1093,25 +1143,25 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     );
   }
 
-  Widget _buildListConversation(Map<String, dynamic> conversation) {
+  Widget _buildListConversation(ConversationModel conversation) {
     final theme = Theme.of(context);
-    final title = conversation['title'];
-    final threadId = conversation['id'];
+    final title = conversation.title;
+    final threadId = conversation.id;
 
     return /* Card(
       child: */ InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () async {
         setState(() {
-          sessionId = threadId.toString();
-          thread_id = threadId;
+          //sessionId = threadId.toString();
+          thread_id = int.tryParse(threadId!);
           _messages.clear();
           _isLoading = true;
         });
         Navigator.pop(context);
         dynamic message = await SunnyService().getConversation(
           tokenValue!,
-          threadId,
+          int.tryParse(threadId!)!,
         );
         List<dynamic> data = message['data'];
         final loadedMessages = <Map<String, String>>[];
@@ -1142,37 +1192,99 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: Text(
-                title,
-                style: theme.textTheme.bodyLarge?.copyWith(color: Colors.amber),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              child: renamedConversation == conversation
+                  ? TextField(
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        hintText: 'Renommer la conversation',
+                        hintStyle: TextStyle(color: Colors.white54),
+                        border: InputBorder.none,
+                      ),
+                      autofocus: true,
+                      /* controller:
+                                            TextEditingController(text: dossier.name), */
+                      onSubmitted: (e) {
+                        setState(() {
+                          //dossier.name = e;
+                          renamedConversation = null;
+                        });
+                        if (e.trim() != '')
+                          _renamedConversation(conversation, e);
+                      },
+                      //),
+                    )
+                  : Text(
+                      title,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: Colors.amber,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
             ),
-            IconButton.outlined(
-              style: ButtonStyle(
-                side: MaterialStateProperty.all(
-                  const BorderSide(color: Colors.amber),
-                ),
-                shape: MaterialStateProperty.all(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+
+            (renamedConversation != conversation)
+                ? Row(
+                    children: [
+                      conversation.favories
+                          ? IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  conversation.favories =
+                                      !conversation.favories;
+                                });
+                                handleFavorite(conversation);
+                              },
+                              icon: Icon(Icons.favorite, color: Colors.amber),
+                            )
+                          : IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  conversation.favories =
+                                      !conversation.favories;
+                                });
+                                handleFavorite(conversation);
+                              },
+                              icon: Icon(
+                                Icons.favorite_border,
+                                color: Colors.amber,
+                              ),
+                            ),
+
+                      _buildMenuConversation(conversation),
+                    ],
+                  )
+                : SizedBox.shrink(),
+
+            /* IconButton.outlined(
+                  style: ButtonStyle(
+                    side: MaterialStateProperty.all(
+                      const BorderSide(color: Colors.amber),
+                    ),
+                    shape: MaterialStateProperty.all(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    padding: MaterialStateProperty.all(EdgeInsets.zero),
                   ),
-                ),
-                padding: MaterialStateProperty.all(EdgeInsets.zero),
-              ),
-              padding: EdgeInsets.zero,
-              onPressed: () {},
-              icon: const Icon(Icons.more_vert, size: 18, color: Colors.amber),
-            ),
-            //const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.amber),
+                  padding: EdgeInsets.zero,
+                  onPressed: () {},
+                  icon: const Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: Colors.amber,
+                  ),
+                ), */
           ],
         ),
+
+        //const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.amber),
       ),
     );
   }
 
-  void _activate(MenuEntry selection, DossierModel dossier) {
+  void _activateDossier(MenuEntry selection, DossierModel dossier) {
     setState(() {
       _lastSelection = selection;
     });
@@ -1197,9 +1309,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       //showingMessage = !showingMessage;
       case MenuEntry.supprimer:
         setState(() {
-          listDossiers.remove(
-            dossier
-          );
+          listDossiers.remove(dossier);
         });
       case MenuEntry.dupliquer:
         setState(() {
@@ -1207,29 +1317,115 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
             DossierModel(id: uuid.v1(), name: 'Copie: ${dossier.name}'),
           );
         });
+      case MenuEntry.discussion:
     }
   }
 
-  Widget _buildMenu(DossierModel dossier) {
+  void _activateConversation(
+    MenuEntry selection,
+    ConversationModel conversation,
+  ) {
+    setState(() {
+      _lastSelection = selection;
+    });
+
+    switch (selection) {
+      case MenuEntry.newMessage:
+        {
+          setState(() {
+            _messages.clear();
+          });
+          Navigator.pop(context);
+        }
+      /* case MenuEntry.ouvrir:
+        debugPrint('Ouvrir'); */
+      case MenuEntry.renommer:
+        setState(() {
+          renamedConversation = conversation;
+        });
+      //showingMessage = !showingMessage;
+      case MenuEntry.supprimer:
+        _deletedConversation(conversation);
+      /* setState(() {
+          listDossiers.remove(dossier);
+        }); */
+      case MenuEntry.dupliquer:
+      /* setState(() {
+          listDossiers.add(
+            DossierModel(id: uuid.v1(), name: 'Copie: ${dossier.name}'),
+          );
+        }); */
+      case MenuEntry.discussion:
+    }
+  }
+
+  Widget _buildMenuDossier(DossierModel dossier) {
     return MenuAnchor(
       childFocusNode: _buttonFocusNode,
       menuChildren: <Widget>[
         MenuItemButton(
           child: Text(MenuEntry.newMessage.label),
-          onPressed: () => _activate(MenuEntry.newMessage, dossier),
+          onPressed: () => _activateDossier(MenuEntry.newMessage, dossier),
         ),
         MenuItemButton(
-          onPressed: () => _activate(MenuEntry.renommer, dossier),
+          onPressed: () => _activateDossier(MenuEntry.renommer, dossier),
           //shortcut: MenuEntry.hideMessage.shortcut,
           child: Text(MenuEntry.renommer.label),
         ),
         MenuItemButton(
-          onPressed: () => _activate(MenuEntry.supprimer, dossier),
+          onPressed: () => _activateDossier(MenuEntry.supprimer, dossier),
           //shortcut: MenuEntry.showMessage.shortcut,
           child: Text(MenuEntry.supprimer.label),
         ),
         MenuItemButton(
-          onPressed: () => _activate(MenuEntry.dupliquer, dossier),
+          onPressed: () => _activateDossier(MenuEntry.dupliquer, dossier),
+          //shortcut: MenuEntry.showMessage.shortcut,
+          child: Text(MenuEntry.dupliquer.label),
+        ),
+      ],
+      builder:
+          (BuildContext context, MenuController controller, Widget? child) {
+            return IconButton(
+              focusNode: _buttonFocusNode,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+              visualDensity: VisualDensity.compact,
+              onPressed: () {
+                if (controller.isOpen) {
+                  controller.close();
+                } else {
+                  controller.open();
+                }
+              },
+              icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
+            );
+          },
+    );
+  }
+
+  Widget _buildMenuConversation(ConversationModel conversation) {
+    return MenuAnchor(
+      childFocusNode: _buttonFocusNode,
+      menuChildren: <Widget>[
+        /* MenuItemButton(
+          child: Text(MenuEntry.newMessage.label),
+          onPressed: () => _activateConversation(MenuEntry.newMessage, conversation),
+        ), */
+        MenuItemButton(
+          onPressed: () =>
+              _activateConversation(MenuEntry.renommer, conversation),
+          //shortcut: MenuEntry.hideMessage.shortcut,
+          child: Text(MenuEntry.renommer.label),
+        ),
+        MenuItemButton(
+          onPressed: () =>
+              _activateConversation(MenuEntry.supprimer, conversation),
+          //shortcut: MenuEntry.showMessage.shortcut,
+          child: Text(MenuEntry.supprimer.label),
+        ),
+        MenuItemButton(
+          onPressed: () =>
+              _activateConversation(MenuEntry.dupliquer, conversation),
           //shortcut: MenuEntry.showMessage.shortcut,
           child: Text(MenuEntry.dupliquer.label),
         ),
@@ -1256,7 +1452,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _messageController.dispose();
     _messagesScrollController.dispose();
     super.dispose();
   }
