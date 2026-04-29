@@ -6,6 +6,7 @@ import 'package:sunnypool_app/models/dossier_model.dart';
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
+import 'package:sunnypool_app/services/folder_thread_service.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/services/sunny_service.dart';
 import 'package:sunnypool_app/utils/poolId_storage.dart';
@@ -20,11 +21,14 @@ enum MenuEntry {
   discussion('Continuer la discussion'),
   renommer('Renommer'),
   supprimer('Supprimer'),
-  dupliquer('Dupliquer');
+  dupliquer('Dupliquer'),
+  addToFolder('Ajouter dans un dossier'),
+  more('Plus');
 
-  const MenuEntry(this.label, [this.shortcut]);
+  const MenuEntry(this.label, [this.menuChildreen]);
   final String label;
-  final MenuSerializableShortcut? shortcut;
+  final List<MenuEntry>? menuChildreen;
+  //final MenuSerializableShortcut? shortcut;
 }
 
 class ChatSunnyScreen extends StatefulWidget {
@@ -54,6 +58,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
 
   bool _isLoading = false;
   bool _isLoadingConversation = false;
+  bool _isLoadingFolder = false;
 
   bool activeWrap = false;
 
@@ -68,8 +73,8 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   bool addFolder = false;
 
   List<DossierModel> listDossiers = [
-    DossierModel(id: 'dossier1', name: 'Dossier 1'),
-    DossierModel(id: 'dossier2', name: 'Dossier 2'),
+    /* DossierModel(id: 'dossier1', name: 'Dossier 1'),
+    DossierModel(id: 'dossier2', name: 'Dossier 2'), */
   ];
 
   DossierModel? selectedDossier;
@@ -77,7 +82,77 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
 
   ConversationModel? renamedConversation;
 
-  void _handleNewFolder(String name) {
+  void _fetchThreadByFolder(int folder_id) async {
+    print(folder_id);
+    var token = await TokenStorage.getToken();
+
+    try {
+      var response = await FolderThreadServicce().getAllThreadToFolder(
+        token!,
+        folder_id,
+      );
+
+      print(response);
+
+      List<ConversationModel> threads = [];
+
+      for (var thread in response['data']) {
+        threads.add(
+          ConversationModel(
+            id: thread['id'].toString(),
+            title: thread['title'],
+            favories: thread['favorites'],
+          ),
+        );
+      }
+
+      setState(() {
+        listConversation = threads;
+      });
+
+      print(response);
+    } catch (error) {
+      print(error);
+    } finally {}
+  }
+
+  void _fetchFolderThread() async {
+    if (!listDossierActive) return;
+
+    var token = await TokenStorage.getToken();
+    var pool_id = await PoolIdStorage.getPoolId();
+
+    try {
+      var response = await FolderThreadServicce().getAllFolderThread(
+        token!,
+        int.tryParse(pool_id!)!,
+      );
+
+      if (response['success']) {
+        List<DossierModel> dossiers = [];
+        for (var dossier in response['data']) {
+          dossiers.add(
+            DossierModel(
+              id: dossier['id'].toString(),
+              name: dossier['name'].trim(),
+            ),
+          );
+        }
+        setState(() {
+          listDossiers = dossiers;
+        });
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Une Erreur à survenue $error"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {}
+  }
+
+  void _handleNewFolder(String name) async {
     if (_folderNameController.text.trim().isEmpty) {
       setState(() {
         addFolder = false;
@@ -85,11 +160,36 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       return;
     }
 
-    setState(() {
-      listDossiers.add(DossierModel(id: uuid.v1(), name: name.trim()));
-      addFolder = false;
-      _folderNameController.clear();
-    });
+    var token = await TokenStorage.getToken();
+    var pool_id = await PoolIdStorage.getPoolId();
+
+    try {
+      var response = await FolderThreadServicce().createFolder(
+        token!,
+        pool_id!,
+        DossierModel(id: uuid.v1(), name: name.trim()),
+      );
+
+      if (response['success']) {
+        print(response['data']);
+        setState(() {
+          listDossiers.add(DossierModel(id: uuid.v1(), name: name.trim()));
+        });
+      }
+    } catch (error) {
+      print(error);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Une Erreur à survenue $error"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        addFolder = false;
+        _folderNameController.clear();
+      });
+    }
   }
 
   void showOptions(String id) {
@@ -194,30 +294,37 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   void handleFavorite(ConversationModel conversation) async {
     var token = await TokenStorage.getToken();
 
-    try{
-      var response = await SunnyService().favoriteConversation(token!, int.tryParse(conversation.id!)! , conversation.favories);
+    try {
+      var response = await SunnyService().favoriteConversation(
+        token!,
+        int.tryParse(conversation.id!)!,
+        conversation.favories,
+      );
 
       print(response);
       conversation.favories = response['data']['favorites'];
 
       ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(conversation.favories ? 'Classer en favorie' : 'N\'est plus votre favorie'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-    }catch(error){
+        SnackBar(
+          content: Text(
+            conversation.favories
+                ? 'Classer en favorie'
+                : 'N\'est plus votre favorie',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Une erreur à survenue'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+        SnackBar(
+          content: Text('Une erreur à survenue'),
+          backgroundColor: Colors.red,
+        ),
+      );
 
-              conversation.favories = !conversation.favories;
+      conversation.favories = !conversation.favories;
       print(error);
     }
-
   }
 
   void _scrollToBottom({bool animated = true}) {
@@ -383,7 +490,11 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         print(response['data'][0]);
         for (final item in response['data']) {
           conversations.add(
-            ConversationModel(id: item['id'].toString(), title: item['title'], favories: item['favorites']),
+            ConversationModel(
+              id: item['id'].toString(),
+              title: item['title'],
+              favories: item['favorites'],
+            ),
           );
         }
       }
@@ -560,6 +671,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                           setState(() {
                             listDossierActive = true;
                           }),
+                          _fetchFolderThread(),
                         },
                     },
                   ),
@@ -567,7 +679,13 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                       ? const SizedBox.shrink()
                       : Flexible(
                           fit: FlexFit.loose,
-                          child: listDossiers.isEmpty
+                          child: _isLoadingFolder
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.amber,
+                                  ),
+                                )
+                              : listDossiers.isEmpty
                               ? addFolder
                                     ? ListTile(
                                         leading: const Icon(
@@ -717,8 +835,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                               }
                                               setState(() {
                                                 selectedDossier = dossier;
-                                                listConversation = [];
                                               });
+                                              _fetchThreadByFolder(
+                                                int.tryParse(dossier.id)!,
+                                              );
                                             },
                                           );
                                         }).toList(),
@@ -831,6 +951,11 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                       child: IconButton(
                         icon: const Icon(Icons.menu, color: Colors.amber),
                         onPressed: () => {
+                          setState(() {
+                            listDossierActive = false;
+                            selectedDossier = null;
+                          }),
+
                           if (selectedDossier == null) _getAllConversation(),
                           scaffoldKey.currentState?.openDrawer(),
                         },
@@ -1318,6 +1443,11 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           );
         });
       case MenuEntry.discussion:
+        break;
+      case MenuEntry.addToFolder:
+        break;
+      case MenuEntry.more:
+        break;
     }
   }
 
@@ -1356,6 +1486,13 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           );
         }); */
       case MenuEntry.discussion:
+        break;
+
+      case MenuEntry.addToFolder:
+        break;
+
+      case MenuEntry.more:
+        break;
     }
   }
 
@@ -1429,6 +1566,36 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           //shortcut: MenuEntry.showMessage.shortcut,
           child: Text(MenuEntry.dupliquer.label),
         ),
+        SubmenuButton(
+          //onPressed: () => _activateConversation(MenuEntry.more, conversation),
+          //shortcut: MenuEntry.showMessage.shortcut,
+          menuChildren: [
+            SubmenuButton(
+              menuChildren: [
+                ...listDossiers.map((dossier){
+                  return MenuItemButton(
+                    onPressed: () async {
+                      var token = await TokenStorage.getToken();
+
+                      try{
+                       var response = await FolderThreadServicce().addThreadToFolder(token!, int.tryParse(dossier.id)!, int.tryParse(conversation.id!)!);
+                        print(response);
+                      }catch(error){
+                        print(error);
+                      }finally{
+
+                      }
+                    },
+                    child: Text(dossier.name),
+                  );
+                })
+              ],
+              child: Text(MenuEntry.addToFolder.label),
+            ),
+          ],
+        child: Text(MenuEntry.more.label),
+        ),
+        
       ],
       builder:
           (BuildContext context, MenuController controller, Widget? child) {
