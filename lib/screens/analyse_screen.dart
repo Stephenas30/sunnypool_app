@@ -14,7 +14,7 @@ import 'package:uuid/uuid.dart';
 import 'profile_screen.dart';
 
 class AnalyseScreen extends StatefulWidget {
-  const AnalyseScreen({Key? key}) : super(key: key);
+  const AnalyseScreen({super.key});
 
   @override
   State<AnalyseScreen> createState() => _AnalyseScreenState();
@@ -38,7 +38,7 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
   final tempController = TextEditingController();
 
   late List<bool> buttonSelected = [true, false];
-  String? sessionId = null;
+  String? sessionId;
   final uuid = Uuid();
   bool _isSubmitting = false;
   bool _isLoading = false;
@@ -76,7 +76,7 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
     super.dispose();
   }
 
-  _analyse() {
+  void _analyse() {
     Map<String, String>? valueAnalyse;
     if (_isSubmitting) return;
 
@@ -106,6 +106,69 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
         'stabilisant': stabilisantController.text,
         'temperature': tempController.text,
       };
+
+      TokenStorage.getToken().then((tokenValue) async {
+        if (sessionId == null) {
+          setState(() {
+            sessionId = uuid.v4();
+          });
+        }
+
+        var poolId = await PoolIdStorage.getPoolId();
+
+        AnalyseService()
+            .sendAnalyse(
+              tokenValue!,
+              AnalyseModel(
+                pool_id: int.tryParse(poolId!),
+                analyse: valueAnalyse,
+              ),
+            )
+            .then((response) async {
+              print(response);
+              _isLoading = true;
+              try {
+                if (response['status'] == "pending") {
+                  print('En cours de traitement. Merci de patienter...');
+                }
+
+                final finalResponse = await _pollUntilCompleted(
+                  tokenValue,
+                  response['analyse_id'],
+                );
+                if (!mounted) return;
+
+                print(finalResponse);
+                setState(() {
+                  _displayOutput = true;
+                  outputAnalyse = finalResponse;
+                });
+              } catch (error) {
+                if (!mounted) return;
+                print('Temps d\'attente dépassé. Merci de réessayer. $error');
+                setState(() {
+                  _displayOutput = true;
+                  outputAnalyse =
+                      'Temps d\'attente dépassé. Merci de réessayer.';
+                });
+              }
+            })
+            .catchError((onError) {
+              if (!mounted) return;
+              print('Error $onError');
+            })
+            .whenComplete(() {
+              if (mounted) {
+                setState(() {
+                  _isSubmitting = false;
+                  analyseChecked = null;
+                });
+              }
+              setState(() {
+                _isLoading = false;
+              });
+            });
+      });
     } else {
       if (imageBandelette == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -118,80 +181,77 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
         });
         return;
       }
+
+      TokenStorage.getToken().then((tokenValue) async {
+        if (sessionId == null) {
+          setState(() {
+            sessionId = uuid.v4();
+          });
+        }
+
+        var poolId = await PoolIdStorage.getPoolId();
+
+        AnalyseService()
+            .sendAnalysePhoto(
+              tokenValue!,
+              AnalyseModel(
+                pool_id: int.tryParse(poolId!),
+                photo_bandelette_base64: imageBandelette,
+              ),
+            )
+            .then((response) async {
+              print(response);
+              _isLoading = true;
+              try {
+                if (response['status'] == "pending") {
+                  print('En cours de traitement. Merci de patienter...');
+                }
+
+                final finalResponse = await _pollUntilCompleted(
+                  tokenValue,
+                  response['analyse_id'],
+                );
+                if (!mounted) return;
+
+                print(finalResponse);
+                setState(() {
+                  _displayOutput = true;
+                  outputAnalyse = finalResponse;
+                });
+              } catch (error) {
+                if (!mounted) return;
+                print('Temps d\'attente dépassé. Merci de réessayer. $error');
+                setState(() {
+                  _displayOutput = true;
+                  outputAnalyse =
+                      'Temps d\'attente dépassé. Merci de réessayer.';
+                });
+              }
+            })
+            .catchError((onError) {
+              if (!mounted) return;
+              print('Error $onError');
+            })
+            .whenComplete(() {
+              if (mounted) {
+                setState(() {
+                  _isSubmitting = false;
+                  analyseChecked = null;
+                });
+              }
+              setState(() {
+                _isLoading = false;
+              });
+            });
+      });
     }
 
     print(valueAnalyse);
-
-    TokenStorage.getToken().then((tokenValue) async {
-      if (sessionId == null) {
-        setState(() {
-          sessionId = uuid.v4();
-        });
-      }
-
-      var pool_id = await PoolIdStorage.getPoolId();
-
-      AnalyseService()
-          .sendAnalyse(
-            tokenValue!,
-            AnalyseModel(
-              pool_id: int.tryParse(pool_id!),
-              analyse: valueAnalyse,
-              photo_bandelette_base64: imageBandelette,
-            ),
-          )
-          .then((response) async {
-            print(response);
-            _isLoading = true;
-            try {
-              if (response['status'] == "pending") {
-                print('En cours de traitement. Merci de patienter...');
-              }
-
-              final finalResponse = await _pollUntilCompleted(
-                tokenValue,
-                response['analyse_id'],
-              );
-              if (!mounted) return;
-
-              print(finalResponse);
-              setState(() {
-                _displayOutput = true;
-                outputAnalyse = finalResponse;
-              });
-            } catch (error) {
-              if (!mounted) return;
-              print('Temps d\'attente dépassé. Merci de réessayer. $error');
-              setState(() {
-                _displayOutput = true;
-                outputAnalyse = 'Temps d\'attente dépassé. Merci de réessayer.';
-              });
-            }
-          })
-          .catchError((onError) {
-            if (!mounted) return;
-            print('Error $onError');
-          })
-          .whenComplete(() {
-            if (mounted) {
-              setState(() {
-                _isSubmitting = false;
-                analyseChecked = null;
-              });
-            }
-            setState(() {
-              _isLoading = false;
-            });
-          });
-    });
   }
 
-  Future<String> _pollUntilCompleted(
-    String token,
-    String analyse_id,
-  ) async {
+  Future<String> _pollUntilCompleted(String token, String analyseId) async {
     for (int attempt = 0; attempt < _pollMaxAttempts; attempt++) {
-      final res = await AnalyseService().responseAnalyse(token, analyse_id);
+      final res = await AnalyseService().responseAnalyse(token, analyseId);
       print(res);
       final found = res['found'] == true;
 
@@ -309,7 +369,7 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                           Expanded(
                             child: ListView.separated(
                               itemCount: listAnalyse.length,
-                              separatorBuilder: (_, __) =>
+                              separatorBuilder: (_, _) =>
                                   const SizedBox(height: 10),
                               itemBuilder: (context, index) =>
                                   _buildListAnalyse(listAnalyse[index]),
@@ -449,9 +509,9 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
                             child: SingleChildScrollView(
                               child: Text(
                                 outputAnalyse,
-                                textAlign: TextAlign.center, 
+                                textAlign: TextAlign.center,
                                 style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: Colors.white70,                   
+                                  color: Colors.white70,
                                   //fontSize: 10,
                                 ),
                               ),

@@ -5,6 +5,8 @@ import 'dashboard_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -21,8 +23,10 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _loading = true);
 
       try {
-        final token = await AuthService()
-            .login(_usernameController.text, _passwordController.text);
+        final token = await AuthService().login(
+          _usernameController.text,
+          _passwordController.text,
+        );
 
         if (token != null) {
           await TokenStorage.saveToken(token);
@@ -42,10 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } catch (e) {
         //print("Erreur de connexion: ${e}");
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("$e"),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text("$e"), backgroundColor: Colors.red),
         );
       } finally {
         setState(() => _loading = false);
@@ -87,14 +88,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 12),
                     Text(
                       'Connexion',
-                      style: theme.textTheme.headlineSmall?.copyWith(color: Colors.amber),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.amber,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     _buildTextField(
                       _usernameController,
                       "Nom d’utilisateur",
                       Icons.person,
-                      validator: (val) => val!.isEmpty ? "Entrez votre nom d’utilisateur" : null,
+                      validator: (val) => val!.isEmpty
+                          ? "Entrez votre nom d’utilisateur"
+                          : null,
                     ),
                     const SizedBox(height: 15),
                     _buildTextField(
@@ -102,7 +107,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       "Mot de passe",
                       Icons.lock,
                       obscure: true,
-                      validator: (val) => val!.isEmpty ? "Entrez votre mot de passe" : null,
+                      validator: (val) =>
+                          val!.isEmpty ? "Entrez votre mot de passe" : null,
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
@@ -111,7 +117,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: _loading ? null : _login,
                         child: _loading
-                            ? const CircularProgressIndicator(color: Colors.black)
+                            ? const CircularProgressIndicator(
+                                color: Colors.black,
+                              )
                             : const Text("Se connecter"),
                       ),
                     ),
@@ -123,11 +131,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           MaterialPageRoute(builder: (_) => RegisterScreen()),
                         );
                       },
-                      child: Text("Pas encore de compte ? Créer un compte", textAlign: TextAlign.center, style: TextStyle(fontSize: screenWidth * 0.03),),
+                      child: Text(
+                        "Pas encore de compte ? Créer un compte",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: screenWidth * 0.03),
+                      ),
                     ),
                     Text(
                       "Mot de passe oublié ?",
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                      ),
                     ),
                   ],
                 ),
@@ -139,9 +153,13 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      IconData icon,
-      {bool obscure = false, String? Function(String?)? validator}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool obscure = false,
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure && !_displayPassword,

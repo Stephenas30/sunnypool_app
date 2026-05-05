@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'profile_screen.dart';
 
 class EquipementScreen extends StatefulWidget {
-  const EquipementScreen({Key? key}) : super(key: key);
+  const EquipementScreen({super.key});
 
   @override
   State<EquipementScreen> createState() => _EquipementScreenState();
@@ -60,7 +60,10 @@ class _EquipementScreenState extends State<EquipementScreen> {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.08),
+          padding: EdgeInsets.symmetric(
+            vertical: 20,
+            horizontal: screenWidth * 0.08,
+          ),
           child: Column(
             children: [
               Container(
@@ -77,7 +80,9 @@ class _EquipementScreenState extends State<EquipementScreen> {
                     const SizedBox(height: 10),
                     Text(
                       'Ajoutons les équipements présents dans votre piscine.',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -87,8 +92,9 @@ class _EquipementScreenState extends State<EquipementScreen> {
               Expanded(
                 child: ListView.separated(
                   itemCount: listEquipement.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) => _buildListEquipement(listEquipement[index]),
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) =>
+                      _buildListEquipement(listEquipement[index]),
                 ),
               ),
               const SizedBox(height: 12),
@@ -99,7 +105,9 @@ class _EquipementScreenState extends State<EquipementScreen> {
                   onPressed: () {},
                   child: Text(
                     'Continuer',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ),
@@ -111,11 +119,15 @@ class _EquipementScreenState extends State<EquipementScreen> {
                   onPressed: () {},
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white38),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: Text(
                     'Passer',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

@@ -24,7 +24,7 @@ extension TypePoolExtension on TypePool {
       case TypePool.enterree:
         return "Enterrée";
       default:
-        return this.toString().split('.').last;
+        return toString().split('.').last;
     }
   }
 

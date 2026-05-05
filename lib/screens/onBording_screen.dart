@@ -3,7 +3,7 @@ import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/screens/register_screen.dart';
 
 class OnbordingScreen extends StatelessWidget {
-  const OnbordingScreen({Key? key}) : super(key: key);
+  const OnbordingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -61,11 +61,20 @@ class OnbordingScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text('☀️ Analyse de l\'eau', style: theme.textTheme.titleMedium),
+                      Text(
+                        '☀️ Analyse de l\'eau',
+                        style: theme.textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 8),
-                      Text('🧪 Dosages précis', style: theme.textTheme.titleMedium),
+                      Text(
+                        '🧪 Dosages précis',
+                        style: theme.textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 8),
-                      Text('🤖 Assistance IA 24/7', style: theme.textTheme.titleMedium),
+                      Text(
+                        '🤖 Assistance IA 24/7',
+                        style: theme.textTheme.titleMedium,
+                      ),
                     ],
                   ),
                 ),
@@ -83,7 +92,9 @@ class OnbordingScreen extends StatelessWidget {
                         },
                         child: Text(
                           'Créer un compte',
-                          style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                     ),
@@ -107,7 +118,9 @@ class OnbordingScreen extends StatelessWidget {
                         ),
                         child: Text(
                           'Se connecter',
-                          style: theme.textTheme.labelLarge?.copyWith(color: Colors.amber),
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.amber,
+                          ),
                         ),
                       ),
                     ),

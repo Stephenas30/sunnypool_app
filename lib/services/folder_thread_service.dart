@@ -5,11 +5,10 @@ import 'package:sunnypool_app/services/internet_service.dart';
 import 'package:http/http.dart' as http;
 
 class FolderThreadServicce {
-
   static const String baseUrl =
       "https://sunny.trouvezpourmoi.com/wp-json/sunny-pool/v1";
 
-    Future<Map<String, dynamic>> getAllFolderThread(
+  Future<Map<String, dynamic>> getAllFolderThread(
     String token,
     int poolId,
   ) async {
@@ -34,7 +33,7 @@ class FolderThreadServicce {
     }
   }
 
-   Future<Map<String, dynamic>> getAllThreadToFolder(
+  Future<Map<String, dynamic>> getAllThreadToFolder(
     String token,
     int folderId,
   ) async {
@@ -62,7 +61,7 @@ class FolderThreadServicce {
   Future<Map<String, dynamic>> addThreadToFolder(
     String token,
     int folderId,
-    int threadId
+    int threadId,
   ) async {
     final hasInternet = await InternetService().hasInternet();
 
@@ -87,7 +86,7 @@ class FolderThreadServicce {
 
   Future<Map<String, dynamic>> createFolder(
     String token,
-    String pool_id,
+    String poolId,
     DossierModel folder,
   ) async {
     final hasInternet = await InternetService().hasInternet();
@@ -101,10 +100,7 @@ class FolderThreadServicce {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
       },
-      body: jsonEncode({
-        "pool_id": pool_id,
-        "name": folder.name
-      })
+      body: jsonEncode({"pool_id": poolId, "name": folder.name}),
     );
 
     if (response.statusCode == 201) {
@@ -156,9 +152,7 @@ class FolderThreadServicce {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
       },
-      body: jsonEncode({
-        "title": newName,
-      }),
+      body: jsonEncode({"title": newName}),
     );
 
     if (response.statusCode == 200) {
@@ -169,7 +163,7 @@ class FolderThreadServicce {
     }
   }
 
-/*   Future<Map<String, dynamic>> favoriteConversation(
+  /*   Future<Map<String, dynamic>> favoriteConversation(
     String token,
     int threadId,
     bool favorite,
@@ -198,10 +192,7 @@ class FolderThreadServicce {
     }
   } */
 
-  Future<Map<String, dynamic>> deleteFolder(
-    String token,
-    int folderId,
-  ) async {
+  Future<Map<String, dynamic>> deleteFolder(String token, int folderId) async {
     final hasInternet = await InternetService().hasInternet();
 
     if (!hasInternet) {
@@ -222,5 +213,4 @@ class FolderThreadServicce {
       throw Exception("Erreur de connexion : \\${response.body}");
     }
   }
-
 }

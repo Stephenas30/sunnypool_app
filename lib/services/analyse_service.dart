@@ -58,6 +58,44 @@ class AnalyseService {
     }
   }
 
+    Future<Map<String, dynamic>> sendAnalysePhoto(
+    String token,
+    //String sessionId,
+    AnalyseModel analyse,
+    /* [dynamic thread_id] */
+  ) async {
+    //print(thread_id);
+      
+      //thread_id ??= sessionId;
+    final hasInternet = await InternetService().hasInternet();
+
+    if (!hasInternet) {
+      throw ('Aucune connexion Internet');
+    }
+  
+    final photoBase64 = await _toBase64IfFilePath(analyse.photo_bandelette_base64?.path);
+
+    final response = await http.post(
+      Uri.parse("$baseUrl/analyse/photo"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({
+        "pool_id": analyse.pool_id,
+        "image_base64": photoBase64,
+        "image_type": "test_strip"
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      return data;
+    } else {
+      throw Exception("Erreur de connexion : \\${response.body}");
+    }
+  }
+
 
   Future<Map<String, dynamic>> responseAnalyse(
     String token,

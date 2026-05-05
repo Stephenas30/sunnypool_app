@@ -36,7 +36,7 @@ class SunnyService {
     String token,
     String sessionId,
     MessageModel message, [
-    dynamic thread_id,
+    dynamic threadId,
   ]) async {
     final hasInternet = await InternetService().hasInternet();
 
@@ -62,7 +62,7 @@ class SunnyService {
         "conversation_id": sessionId,
         "data_options": message.data_options,
         "analyse": message.analyse,
-        "thread_id": thread_id,
+        "thread_id": threadId,
       }),
     );
 

@@ -16,7 +16,7 @@ class AnalyseResult {
 }
 
 class ResultAnalyseScreen extends StatefulWidget {
-  const ResultAnalyseScreen({Key? key}) : super(key: key);
+  const ResultAnalyseScreen({super.key});
 
   @override
   State<ResultAnalyseScreen> createState() {
@@ -89,128 +89,141 @@ class _ResultAnalyseScreenState extends State<ResultAnalyseScreen> {
           child: Padding(
             padding: EdgeInsetsGeometry.symmetric(horizontal: 12),
             child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 40),
-                margin: EdgeInsets.only(left: 8, top: 20),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.85),
-                  borderRadius: BorderRadius.all(Radius.circular(20)),
-                ),
-                child: Text(
-                  alert,
-                  style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
-                  textAlign: TextAlign.start,
-                ),
-              ),
-              ConstrainedBox(
-                
-                constraints: BoxConstraints(
-                  minHeight: screenHeight / 5,
-                  minWidth: screenWidth / 5,
-                  maxWidth: screenWidth / 1.2,
-                  maxHeight: screenHeight / 3,
-                ),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  children: [
-                    ...result.map((r) => _buildCardContainer(r)).toList(),
-                  ],
-                ),
-              ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                spacing: 20,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A1A1A),
-                      border: Border.all(color: Colors.amber.withOpacity(0.22)),
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 40),
+                  margin: EdgeInsets.only(left: 8, top: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.85),
+                    borderRadius: BorderRadius.all(Radius.circular(20)),
+                  ),
+                  child: Text(
+                    alert,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
                     ),
-                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 20),
-                    margin: EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 12,
-                      children: [
-                        Text(
-                          'Voc à vos mesures :',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: screenWidth * 0.05, color: Colors.amber),
+                    textAlign: TextAlign.start,
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: screenHeight / 5,
+                    minWidth: screenWidth / 5,
+                    maxWidth: screenWidth / 1.2,
+                    maxHeight: screenHeight / 3,
+                  ),
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    children: [...result.map((r) => _buildCardContainer(r))],
+                  ),
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  spacing: 20,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.22),
                         ),
-                        advices.isEmpty
-                            ? Text(
-                                'Aucun conseil à donner pour le moment',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: screenWidth * 0.03),
-                              )
-                            : Column(
-                                spacing: 8,
-                                children: [
-                                  ...advices
-                                      .map(
-                                        (advice) => Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.start,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              advice,
-                                              style: TextStyle(
-                                                fontSize: screenWidth * 0.03,
-                                                color: Colors.white70,
-                                              ),
-                                              textAlign: TextAlign.center,
+                        borderRadius: BorderRadius.all(Radius.circular(20)),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 20,
+                      ),
+                      margin: EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 12,
+                        children: [
+                          Text(
+                            'Voc à vos mesures :',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.05,
+                              color: Colors.amber,
+                            ),
+                          ),
+                          advices.isEmpty
+                              ? Text(
+                                  'Aucun conseil à donner pour le moment',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: screenWidth * 0.03,
+                                  ),
+                                )
+                              : Column(
+                                  spacing: 8,
+                                  children: [
+                                    ...advices.map(
+                                      (advice) => Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            advice,
+                                            style: TextStyle(
+                                              fontSize: screenWidth * 0.03,
+                                              color: Colors.white70,
                                             ),
-                                          ],
-                                        ),
-                                      )
-                                      .toList(),
-                                ],
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      spacing: 8,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: () {},
+                            child: Text(
+                              'Parler à Sunny',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: Colors.black,
                               ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: OutlinedButton(
+                            onPressed: () {},
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white38),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: Text(
+                              'Enregistrer cette analyse',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  Column(
-                    spacing: 8,
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                        onPressed: () {},
-                        child: Text(
-                          'Parler à Sunny',
-                          style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
-                        ),
-                      ),
-                      ),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton(
-                        onPressed: () {},
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.white38),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: Text(
-                          'Enregistrer cette analyse',
-                          style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
-                        ),
-                      ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
             ),
           ),
         ),

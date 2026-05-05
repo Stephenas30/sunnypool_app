@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'profile_screen.dart';
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({Key? key}) : super(key: key);
+  const AddProductScreen({super.key});
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -84,7 +84,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.08),
+          padding: EdgeInsets.symmetric(
+            vertical: 20,
+            horizontal: screenWidth * 0.08,
+          ),
           child: Column(
             children: [
               Container(
@@ -101,7 +104,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     const SizedBox(height: 10),
                     Text(
                       'Ajoutez les produits d\'entretien que vous utilisez dans votre piscine.',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -110,7 +115,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
               const SizedBox(height: 14),
               Expanded(
                 child: ListView(
-                  children: availableProducts.map((item) => _buildProductItem(item)).toList(),
+                  children: availableProducts
+                      .map((item) => _buildProductItem(item))
+                      .toList(),
                 ),
               ),
               const SizedBox(height: 10),
@@ -119,13 +126,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () {
-                    final selected = availableProducts.where((p) => p['selected'] == true).toList();
+                    final selected = availableProducts
+                        .where((p) => p['selected'] == true)
+                        .toList();
                     print('Produits ajoutés: $selected');
                     Navigator.pop(context, selected);
                   },
                   child: Text(
                     'Ajouter',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ),
@@ -139,11 +150,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white38),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: Text(
                     'Annuler',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -163,7 +178,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         border: Border.all(
-          color: product['selected'] ? Colors.amber : Colors.amber.withOpacity(0.25),
+          color: product['selected']
+              ? Colors.amber
+              : Colors.amber.withOpacity(0.25),
         ),
         borderRadius: const BorderRadius.all(Radius.circular(20)),
       ),

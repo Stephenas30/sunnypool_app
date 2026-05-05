@@ -2,13 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/models/user_model.dart';
 import 'package:sunnypool_app/screens/add_product.dart';
 import 'package:sunnypool_app/screens/analyse_screen.dart';
 import 'package:sunnypool_app/screens/chat_sunny_screen.dart';
-import 'package:sunnypool_app/screens/configurationPiscine_screen.dart';
-import 'package:sunnypool_app/screens/diagnostique_photo_screen.dart';
 import 'package:sunnypool_app/screens/historique_analyses.dart';
 import 'package:sunnypool_app/screens/information_piscine_screen.dart';
 import 'package:sunnypool_app/screens/login_screen.dart';
@@ -18,6 +17,7 @@ import 'package:sunnypool_app/screens/planning_entretien_screen.dart';
 import 'package:sunnypool_app/screens/product_sreen.dart';
 import 'package:sunnypool_app/screens/tutorals_screen.dart';
 import 'package:sunnypool_app/services/meteo_service.dart';
+import 'package:sunnypool_app/services/planning_service.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/utils/list_piscine.dart';
 import 'package:sunnypool_app/utils/poolId_storage.dart';
@@ -27,18 +27,24 @@ import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Pool? pool;
-  DashboardScreen({Key? key, this.pool}) : super(key: key);
+  const DashboardScreen({super.key, this.pool});
 
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final PlanningService _planningService = PlanningService();
   late Future<Map<String, dynamic>> weatherFuture;
   //late Future<dynamic> allPool;
   Pool? checkPool;
   Timer? timer;
   bool loading = true;
+  bool _planningLoading = true;
+  String? _planningError;
+  final List<_DashboardPlanningItem> _planningItems = [];
+  final Set<String> _planningUpdatingIds = {};
+  final DateFormat _planningDateFormat = DateFormat('dd/MM • HH:mm', 'fr_FR');
 
   @override
   void initState() {
@@ -49,6 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       print(widget.pool!.id.toString());
       checkPool = widget.pool;
       loading = false;
+      _loadPlanningForCurrentPool();
     } else {
       TokenStorage.getToken().then((tokenValue) {
         print(tokenValue);
@@ -60,9 +67,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Pool pool = Pool(
                 id: pools['data'][0]['id'].toString(),
                 name: pools['data'][0]['titre'] ?? 'not name',
-                type: TypePoolExtension.fromString(pools['data'][0]['caracteristiques']['type']?.toString() ?? 'coque'),
-                    /* pools['data'][0]['caracteristiques']['type'] ?? */
-                    //TypePool.beton,
+                type: TypePoolExtension.fromString(
+                  pools['data'][0]['caracteristiques']['type']?.toString() ??
+                      'coque',
+                ),
+                /* pools['data'][0]['caracteristiques']['type'] ?? */
+                //TypePool.beton,
                 dimension: Dimension(
                   length: parseDouble(
                     pools['data'][0]['caracteristiques']['longueur'],
@@ -96,6 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 checkPool = pool;
                 loading = false;
               });
+              _loadPlanningForCurrentPool();
             })
             .catchError((error) {
               if (error is ApiException && error.statusCode == 401) {
@@ -156,18 +167,112 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ); */
 
   List<String> pools = [];
-  List<String> maintenanceChecked = [];
-  List<String> maintenance = [
-    "Vérifier le pH",
-    "Nettoyer skimmer",
-    "entretien 3",
-    "entretien 4",
-    "entretien 5",
-  ];
 
   Map<String, dynamic> traitement = {'product': 'Chlore', 'percent': 0.7};
   double temperature = 29;
   List temps = ['Ensoleillé', 'Vent faible'];
+
+  Future<void> _loadPlanningForCurrentPool() async {
+    setState(() {
+      _planningLoading = true;
+      _planningError = null;
+    });
+
+    try {
+      final token = await TokenStorage.getToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('Session expirée. Veuillez vous reconnecter.');
+      }
+
+      final poolId = int.tryParse((checkPool?.id ?? '').toString());
+      final response = await _planningService.getAllPlanning(
+        token,
+        poolId: poolId,
+      );
+
+      final data = response['data'];
+      final List<_DashboardPlanningItem> fetched = [];
+      if (data is List) {
+        for (final item in data) {
+          final parsed = _DashboardPlanningItem.fromApi(item);
+          if (parsed != null) fetched.add(parsed);
+        }
+      }
+
+      fetched.sort((a, b) {
+        if (a.isDone != b.isDone) return a.isDone ? 1 : -1;
+        return a.startTime.compareTo(b.startTime);
+      });
+
+      if (!mounted) return;
+      setState(() {
+        _planningItems
+          ..clear()
+          ..addAll(fetched);
+        _planningLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _planningLoading = false;
+        _planningError = e.toString();
+      });
+    }
+  }
+
+  Future<void> _togglePlanningDone(_DashboardPlanningItem item) async {
+    final token = await TokenStorage.getToken();
+    if (token == null || token.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session expirée. Reconnectez-vous.')),
+      );
+      return;
+    }
+
+    if (_planningUpdatingIds.contains(item.id)) return;
+    setState(() => _planningUpdatingIds.add(item.id));
+
+    try {
+      final response = await _planningService.updatePlanning(
+        token,
+        int.parse(item.id),
+        isDone: !item.isDone,
+      );
+      final updated = _DashboardPlanningItem.fromApi(response['data']);
+
+      if (!mounted) return;
+      setState(() {
+        final index = _planningItems.indexWhere((it) => it.id == item.id);
+        if (index >= 0) {
+          _planningItems[index] =
+              updated ?? item.copyWith(isDone: !item.isDone);
+          _planningItems.sort((a, b) {
+            if (a.isDone != b.isDone) return a.isDone ? 1 : -1;
+            return a.startTime.compareTo(b.startTime);
+          });
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Mise à jour impossible: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _planningUpdatingIds.remove(item.id));
+      }
+    }
+  }
+
+  Future<void> _openPlanningScreen() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlanningEntretienScreen()),
+    );
+    if (!mounted) return;
+    _loadPlanningForCurrentPool();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -396,8 +501,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   FutureBuilder(
                                     future: weatherFuture,
                                     builder: (context, snapshot) {
-                                      if (!snapshot.hasData)
+                                      if (!snapshot.hasData) {
                                         return CircularProgressIndicator();
+                                      }
 
                                       final weather =
                                           snapshot.data!['current_weather'];
@@ -498,13 +604,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Prochain entretien',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: screenWidth * 0.05,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Planning d\'entretien',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: screenWidth * 0.05,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: _openPlanningScreen,
+                                    icon: const Icon(
+                                      Icons.open_in_new,
+                                      size: 16,
+                                      color: Colors.amber,
+                                    ),
+                                    label: const Text(
+                                      'Voir tout',
+                                      style: TextStyle(color: Colors.amber),
+                                    ),
+                                  ),
+                                ],
                               ),
                               Divider(
                                 color: Colors.white54,
@@ -512,51 +636,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                               SizedBox(height: 10),
                               Expanded(
-                                child: ListView(
-                                  shrinkWrap: true,
-                                  physics: NeverScrollableScrollPhysics(),
-                                  children: maintenance
-                                      .map(
-                                        (item) => CheckboxListTile(
-                                          title: Text(
-                                            item,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: screenWidth * 0.03,
-                                            ),
-                                          ),
-                                          value: maintenanceChecked.contains(
-                                            item,
-                                          ),
-                                          checkColor: Colors.black,
-                                          activeColor: const Color.fromARGB(
-                                            255,
-                                            137,
-                                            255,
-                                            139,
-                                          ),
-                                          hoverColor: const Color.fromARGB(
-                                            255,
-                                            137,
-                                            255,
-                                            139,
-                                          ).withOpacity(0.2),
-                                          onChanged: (bool? value) {
-                                            setState(() {
-                                              maintenanceChecked.contains(item)
-                                                  ? maintenanceChecked.remove(
-                                                      item,
-                                                    )
-                                                  : maintenanceChecked.add(
-                                                      item,
-                                                    );
-                                            });
-                                          },
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
+                                child: _buildPlanningSectionList(screenWidth),
                               ),
+                              if (_planningError != null) ...[
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed: _loadPlanningForCurrentPool,
+                                  icon: const Icon(
+                                    Icons.refresh,
+                                    color: Colors.amber,
+                                    size: 16,
+                                  ),
+                                  label: const Text(
+                                    'Réessayer',
+                                    style: TextStyle(color: Colors.amber),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -608,6 +704,72 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPlanningSectionList(double screenWidth) {
+    if (_planningLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_planningItems.isEmpty) {
+      return Center(
+        child: Text(
+          'Aucun planning pour cette piscine.',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: screenWidth * 0.032,
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      itemCount: _planningItems.length,
+      separatorBuilder: (_, index) => const SizedBox(height: 4),
+      itemBuilder: (context, index) {
+        final item = _planningItems[index];
+        final isUpdating = _planningUpdatingIds.contains(item.id);
+        return CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: Text(
+            item.title,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: screenWidth * 0.033,
+              decoration: item.isDone ? TextDecoration.lineThrough : null,
+            ),
+          ),
+          subtitle: Text(
+            '${_planningDateFormat.format(item.startTime)} - ${DateFormat('HH:mm', 'fr_FR').format(item.endTime)}'
+            '${item.notes.isEmpty ? '' : '\n${item.notes}'}',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          isThreeLine: item.notes.isNotEmpty,
+          value: item.isDone,
+          checkColor: Colors.black,
+          activeColor: const Color.fromARGB(255, 137, 255, 139),
+          onChanged: isUpdating ? null : (_) => _togglePlanningDone(item),
+          secondary: isUpdating
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(
+                  item.isDone
+                      ? Icons.check_circle_outline
+                      : Icons.radio_button_unchecked,
+                  color: item.isDone ? Colors.greenAccent : Colors.amber,
+                ),
+        );
+      },
     );
   }
 
@@ -694,5 +856,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+}
+
+class _DashboardPlanningItem {
+  final String id;
+  final String title;
+  final DateTime startTime;
+  final DateTime endTime;
+  final String notes;
+  final bool isDone;
+
+  _DashboardPlanningItem({
+    required this.id,
+    required this.title,
+    required this.startTime,
+    required this.endTime,
+    required this.notes,
+    required this.isDone,
+  });
+
+  _DashboardPlanningItem copyWith({
+    String? id,
+    String? title,
+    DateTime? startTime,
+    DateTime? endTime,
+    String? notes,
+    bool? isDone,
+  }) {
+    return _DashboardPlanningItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      notes: notes ?? this.notes,
+      isDone: isDone ?? this.isDone,
+    );
+  }
+
+  static _DashboardPlanningItem? fromApi(dynamic item) {
+    if (item is! Map) return null;
+    final rawId = item['id']?.toString();
+    if (rawId == null || rawId.isEmpty) return null;
+
+    final title = (item['title'] ?? '').toString().trim();
+    final start = _parseDate(item['startTime']) ?? DateTime.now();
+    final end =
+        _parseDate(item['endTime']) ?? start.add(const Duration(hours: 1));
+
+    return _DashboardPlanningItem(
+      id: rawId,
+      title: title.isEmpty ? 'Nouvelle tâche' : title,
+      startTime: start,
+      endTime: end,
+      notes: (item['notes'] ?? '').toString().trim(),
+      isDone: _parseBool(item['isDone']),
+    );
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) {
+      final v = value.toLowerCase();
+      return v == '1' || v == 'true';
+    }
+    return false;
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    final raw = value.toString().trim();
+    if (raw.isEmpty) return null;
+    return DateTime.tryParse(raw.replaceFirst(' ', 'T'));
   }
 }

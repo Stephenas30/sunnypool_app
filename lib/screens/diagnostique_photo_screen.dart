@@ -5,7 +5,8 @@ class DiagnostiquePhotoScreen extends StatefulWidget {
   const DiagnostiquePhotoScreen({super.key});
 
   @override
-  State<DiagnostiquePhotoScreen> createState() => _DiagnostiquePhotoScreenState();
+  State<DiagnostiquePhotoScreen> createState() =>
+      _DiagnostiquePhotoScreenState();
 }
 
 const listDiagnostique = [
@@ -16,19 +17,16 @@ const listDiagnostique = [
 ];
 
 class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
-
   bool _isSubmitting = false;
 
-  _analyse() {
+  void _analyse() {
     if (_isSubmitting) return;
 
     setState(() {
       _isSubmitting = true;
     });
 
-    Map<String, String> valueAnalyse = {
-      
-    };
+    Map<String, String> valueAnalyse = {};
     print(valueAnalyse);
     /* TokenStorage.getToken().then((tokenValue) {
       if (sessionId == null) {
@@ -141,32 +139,37 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.04),
+          padding: EdgeInsets.symmetric(
+            vertical: 20,
+            horizontal: screenWidth * 0.04,
+          ),
           child: Center(
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            spacing: 20,
-            children: [
-              Column(
-                children: [
-                  Image.asset('assets/logo.png', height: screenHeight / 6),
-                  Text(
-                    'Analyse intelligente des photos en cours.',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                    textAlign: TextAlign.center,
-                    softWrap: true,
-                  ),
-                ],
-              ),
-              ListView(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                children: listDiagnostique
-                    .map((item) => _buildListTutoriels(item))
-                    .toList(),
-              ),
-              /* Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              spacing: 20,
+              children: [
+                Column(
+                  children: [
+                    Image.asset('assets/logo.png', height: screenHeight / 6),
+                    Text(
+                      'Analyse intelligente des photos en cours.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
+                      textAlign: TextAlign.center,
+                      softWrap: true,
+                    ),
+                  ],
+                ),
+                ListView(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  children: listDiagnostique
+                      .map((item) => _buildListTutoriels(item))
+                      .toList(),
+                ),
+                /* Column(
                 children: [
                   SizedBox(
                     width: double.infinity,
@@ -197,30 +200,30 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
                   ),
                 ],
               ) */
-             SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : _analyse,
-                  icon: _isSubmitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.black,
-                          ),
-                        )
-                      : const Icon(Icons.check_circle),
-                  label: Text(
-                    _isSubmitting ? 'Analysé...' : 'Analyser',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: Colors.black,
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: _isSubmitting ? null : _analyse,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.black,
+                            ),
+                          )
+                        : const Icon(Icons.check_circle),
+                    label: Text(
+                      _isSubmitting ? 'Analysé...' : 'Analyser',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
             ),
           ),
         ),
@@ -244,15 +247,14 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
           elevation: 0, // supprime l'élévation
           padding: EdgeInsets.zero, // supprime le padding
         ),
-        onPressed: () {
-          
-        },
+        onPressed: () {},
         child: Row(
           children: [
             const SizedBox(width: 8),
-            Icon(Icons.check_circle_outline, color: Colors.amber,),
+            Icon(Icons.check_circle_outline, color: Colors.amber),
             const SizedBox(width: 10),
-            Expanded(child: Text(
+            Expanded(
+              child: Text(
                 title,
                 style: TextStyle(
                   color: Colors.white,
@@ -260,7 +262,8 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
-              )),
+              ),
+            ),
           ],
         ),
       ),

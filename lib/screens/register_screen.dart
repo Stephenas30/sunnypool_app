@@ -6,6 +6,8 @@ import 'login_screen.dart';
 import 'userlocation_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -27,18 +29,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _loading = true);
 
       try {
-        final token = await AuthService()
-            .register(_usernameController.text, _passwordController.text);
+        final token = await AuthService().register(
+          _usernameController.text,
+          _passwordController.text,
+        );
 
         if (token != null) {
           await TokenStorage.saveToken(token);
           Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => AddPiscineScreen(isFirstTime: true)));
+            context,
+            MaterialPageRoute(
+              builder: (_) => AddPiscineScreen(isFirstTime: true),
+            ),
+          );
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur : $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Erreur : $e")));
       } finally {
         setState(() => _loading = false);
       }
@@ -76,25 +84,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 12),
                     Text(
                       "Créer un compte",
-                      style: theme.textTheme.headlineSmall?.copyWith(color: Colors.amber),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.amber,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     _buildTextField(
                       _usernameController,
                       "Nom d’utilisateur",
                       Icons.person,
-                      validator: (val) => val!.isEmpty ? "Entrez un nom d’utilisateur" : null,
+                      validator: (val) =>
+                          val!.isEmpty ? "Entrez un nom d’utilisateur" : null,
                     ),
                     const SizedBox(height: 12),
-                    _buildTextField(_firstNameController, "Prénom", Icons.badge),
+                    _buildTextField(
+                      _firstNameController,
+                      "Prénom",
+                      Icons.badge,
+                    ),
                     const SizedBox(height: 12),
-                    _buildTextField(_lastNameController, "Nom", Icons.badge_outlined),
+                    _buildTextField(
+                      _lastNameController,
+                      "Nom",
+                      Icons.badge_outlined,
+                    ),
                     const SizedBox(height: 12),
                     _buildTextField(
                       _emailController,
                       "Adresse email",
                       Icons.email,
-                      validator: (val) => val!.isEmpty ? "Entrez une adresse email" : null,
+                      validator: (val) =>
+                          val!.isEmpty ? "Entrez une adresse email" : null,
                     ),
                     const SizedBox(height: 12),
                     _buildTextField(_phoneController, "Téléphone", Icons.phone),
@@ -104,7 +124,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       "Mot de passe",
                       Icons.lock,
                       obscure: true,
-                      validator: (val) => val!.length < 6 ? "Mot de passe trop court" : null,
+                      validator: (val) =>
+                          val!.length < 6 ? "Mot de passe trop court" : null,
                     ),
                     const SizedBox(height: 12),
                     _buildTextField(
@@ -112,8 +133,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       "Confirmer mot de passe",
                       Icons.lock_outline,
                       obscure: true,
-                      validator: (val) =>
-                          val != _passwordController.text ? "Les mots de passe ne correspondent pas" : null,
+                      validator: (val) => val != _passwordController.text
+                          ? "Les mots de passe ne correspondent pas"
+                          : null,
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
@@ -122,7 +144,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: ElevatedButton(
                         onPressed: _loading ? null : _register,
                         child: _loading
-                            ? const CircularProgressIndicator(color: Colors.black)
+                            ? const CircularProgressIndicator(
+                                color: Colors.black,
+                              )
                             : const Text("Créer mon compte"),
                       ),
                     ),
@@ -138,7 +162,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     Text(
                       "En continuant, vous acceptez nos Conditions générales d'utilisation.",
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -151,9 +177,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      IconData icon,
-      {bool obscure = false, String? Function(String?)? validator}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool obscure = false,
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,

@@ -11,7 +11,7 @@ class EvolutionData {
 }
 
 class HistoriquesChats extends StatefulWidget {
-  const HistoriquesChats({Key? key}) : super(key: key);
+  const HistoriquesChats({super.key});
 
   @override
   State<HistoriquesChats> createState() {
@@ -102,7 +102,7 @@ class _HistoriquesChatsState extends State<HistoriquesChats> {
               Expanded(
                 child: ListView.separated(
                   itemCount: phEvolution.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) => Card(
                     child: ListTile(
                       title: Text(
@@ -127,7 +127,9 @@ class _HistoriquesChatsState extends State<HistoriquesChats> {
                   onPressed: () {},
                   child: Text(
                     'Nouvelle question à Sunny',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ),
@@ -139,11 +141,15 @@ class _HistoriquesChatsState extends State<HistoriquesChats> {
                   onPressed: () {},
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white38),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: Text(
                     'Annuler',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

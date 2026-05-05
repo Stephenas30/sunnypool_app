@@ -15,7 +15,7 @@ class EvolutionData {
 }
 
 class HistoriqueAnalyses extends StatefulWidget {
-  const HistoriqueAnalyses({Key? key}) : super(key: key);
+  const HistoriqueAnalyses({super.key});
 
   @override
   State<HistoriqueAnalyses> createState() {
@@ -31,8 +31,26 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
   void _loadAnalyses() async {
     var token = await TokenStorage.getToken();
     var poolId = await PoolIdStorage.getPoolId();
+
+    if (token == null || token.isEmpty || poolId == null || poolId.isEmpty) {
+      setState(() {
+        _errorMessage = 'Session invalide. Reconnectez-vous puis réessayez.';
+        isLoading = false;
+      });
+      return;
+    }
+
+    final parsedPoolId = int.tryParse(poolId);
+    if (parsedPoolId == null) {
+      setState(() {
+        _errorMessage = 'Identifiant de piscine invalide.';
+        isLoading = false;
+      });
+      return;
+    }
+
     await AnalyseService()
-        .getAllAnalyse(token!, int.tryParse(poolId!)!)
+        .getAllAnalyse(token, parsedPoolId)
         .then((data) {
           print(data);
           setState(() {
@@ -50,6 +68,42 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
             isLoading = false;
           });
         });
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      final cleaned = value.trim().replaceAll(',', '.');
+      if (cleaned.isEmpty || cleaned.toLowerCase() == 'null') return null;
+      return double.tryParse(cleaned);
+    }
+    return null;
+  }
+
+  DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    final raw = value.toString().trim();
+    if (raw.isEmpty) return null;
+    return DateTime.tryParse(raw.replaceFirst(' ', 'T'));
+  }
+
+  String _formatMetric(dynamic value) {
+    final v = _toDouble(value);
+    return v == null ? '-' : v.toString();
+  }
+
+  List<FlSpot> _spotsForMetric(String key) {
+    final spots = <FlSpot>[];
+    for (var i = 0; i < analyses.length; i++) {
+      final analyse = analyses[i]['analyse'];
+      if (analyse is! Map) continue;
+      final y = _toDouble(analyse[key]);
+      if (y == null) continue;
+      spots.add(FlSpot(i.toDouble(), y));
+    }
+    return spots;
   }
 
   @override
@@ -124,7 +178,7 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                     Expanded(
                       child: ListView.separated(
                         itemCount: analyses.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (context, index) => Card(
                           child: ListTile(
                             title: Text(
@@ -134,7 +188,7 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                               ),
                             ),
                             subtitle: Text(
-                              'pH ${analyses[index]['analyse']['ph']} • Chlore ${analyses[index]['analyse']['chlore']} • TAC ${analyses[index]['analyse']['tac']} • Stabilisants ${analyses[index]['analyse']['stabilisant']}',
+                              'pH ${_formatMetric(analyses[index]['analyse']?['ph'])} • Chlore ${_formatMetric(analyses[index]['analyse']?['chlore'])} • TAC ${_formatMetric(analyses[index]['analyse']?['tac'])} • Stabilisants ${_formatMetric(analyses[index]['analyse']?['stabilisant'])}',
                               style: const TextStyle(color: Colors.white70),
                             ),
                             trailing: const Icon(
@@ -212,9 +266,9 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                           return const SizedBox();
                         }
 
-                        final date = DateTime.parse(
-                          analyses[index]['updated_at'],
-                        );
+                        final date =
+                            _parseDate(analyses[index]['updated_at']) ??
+                            DateTime.now();
                         final day = date.day.toString().padLeft(2, '0');
                         final month = date.month.toString().padLeft(2, '0');
                         return Text(
@@ -244,60 +298,28 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                 lineBarsData: [
                   LineChartBarData(
                     isCurved: true,
-                    spots: List.generate(
-                      analyses.length,
-                      (index) => FlSpot(
-                        index.toDouble(),
-                        double.parse(
-                          analyses[index]['analyse']['chlore'].toString(),
-                        ),
-                      ),
-                    ),
+                    spots: _spotsForMetric('chlore'),
                     barWidth: 4,
                     dotData: FlDotData(show: true),
                     color: Colors.amber,
                   ),
                   LineChartBarData(
                     isCurved: true,
-                    spots: List.generate(
-                      analyses.length,
-                      (index) => FlSpot(
-                        index.toDouble(),
-                        double.parse(
-                          analyses[index]['analyse']['tac'].toString(),
-                        ),
-                      ),
-                    ),
+                    spots: _spotsForMetric('tac'),
                     barWidth: 4,
                     dotData: FlDotData(show: true),
                     color: Colors.green,
                   ),
                   LineChartBarData(
                     isCurved: true,
-                    spots: List.generate(
-                      analyses.length,
-                      (index) => FlSpot(
-                        index.toDouble(),
-                        double.parse(
-                          analyses[index]['analyse']['stabilisant'].toString(),
-                        ),
-                      ),
-                    ),
+                    spots: _spotsForMetric('stabilisant'),
                     barWidth: 4,
                     dotData: FlDotData(show: true),
                     color: Colors.blue,
                   ),
                   LineChartBarData(
                     isCurved: true,
-                    spots: List.generate(
-                      analyses.length,
-                      (index) => FlSpot(
-                        index.toDouble(),
-                        double.parse(
-                          analyses[index]['analyse']['ph'].toString(),
-                        ),
-                      ),
-                    ),
+                    spots: _spotsForMetric('ph'),
                     barWidth: 4,
                     dotData: FlDotData(show: true),
                     color: Colors.deepOrangeAccent,

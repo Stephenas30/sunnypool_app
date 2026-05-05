@@ -47,7 +47,7 @@ class _AddProductState extends State<AddProduct> {
     }
   }
 
-  _AddProduct() {
+  void _AddProduct() {
     if (_isSubmitting) return;
     print("AddProduct constructor called");
     print("Name product: ${_nameController.text}");
@@ -227,7 +227,7 @@ class _AddProductState extends State<AddProduct> {
                       const SizedBox(height: 10),
                       _buildInputLabel(theme, 'Catégorie'),
                       DropdownButtonFormField<Categorie>(
-                        value: _selectedCategory,
+                        initialValue: _selectedCategory,
                         dropdownColor: const Color(0xFF1A1A1A),
                         iconEnabledColor: Colors.amber,
                         style: const TextStyle(color: Colors.white),

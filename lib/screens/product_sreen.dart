@@ -7,7 +7,7 @@ import 'package:sunnypool_app/utils/token_storage.dart';
 import 'profile_screen.dart';
 
 class ProductScreen extends StatefulWidget {
-  const ProductScreen({Key? key}) : super(key: key);
+  const ProductScreen({super.key});
 
   @override
   State<ProductScreen> createState() => _ProductScreenState();
@@ -140,7 +140,10 @@ class _ProductScreenState extends State<ProductScreen> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 20,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF121212),
                   borderRadius: BorderRadius.circular(20),
@@ -154,7 +157,7 @@ class _ProductScreenState extends State<ProductScreen> {
                       'Sélectionnez vos produits d\'entretien piscine pour que Sunny vous donne des recommandations précises et optimisées.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white70,
-                          fontSize: screenWidth * 0.03
+                        fontSize: screenWidth * 0.03,
                       ),
                       textAlign: TextAlign.center,
                     ),

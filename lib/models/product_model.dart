@@ -1,6 +1,4 @@
-import 'dart:io';
-
-enum Categorie{
+enum Categorie {
   chlore_choc,
   chlore_lent,
   ph_plus,
@@ -9,7 +7,7 @@ enum Categorie{
   clarifiant,
   floculant,
   sequestrant_calcaire,
-  sequestrant_metaux
+  sequestrant_metaux,
 }
 
 extension CategorieExtension on Categorie {

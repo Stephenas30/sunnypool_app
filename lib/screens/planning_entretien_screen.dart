@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sunnypool_app/services/planning_service.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:sunnypool_app/utils/token_storage.dart';
 
 import 'profile_screen.dart';
 
@@ -308,6 +310,7 @@ class _AddPlanningBottomSheetState extends State<_AddPlanningBottomSheet> {
 }
 
 class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
+  final PlanningService _planningService = PlanningService();
   final List<_PlanningTask> _planningItems = [];
   final DateFormat _dayFormat = DateFormat('EEEE d MMMM', 'fr_FR');
   final DateFormat _hourFormat = DateFormat('HH:mm', 'fr_FR');
@@ -315,42 +318,116 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
 
   ButtonOption _buttonOption = ButtonOption.calendar;
   bool _isAddSheetOpen = false;
-  int _taskSequence = 3;
+  bool _isLoading = true;
+  bool _isSaving = false;
+  String? _loadingError;
 
   @override
   void initState() {
     super.initState();
-    _seedPlanning();
-    _planningDataSource = _PlanningDataSource(_appointmentsFromPlanning());
+    _planningDataSource = _PlanningDataSource([]);
+    _loadPlannings();
   }
 
-  void _seedPlanning() {
-    final now = DateTime.now();
-    _planningItems.addAll([
-      _PlanningTask(
-        id: 'task_1',
-        title: 'Nettoyer les skimmers',
-        startTime: DateTime(now.year, now.month, now.day + 1, 8, 0),
-        endTime: DateTime(now.year, now.month, now.day + 1, 8, 45),
-        color: Colors.amber.shade700,
-        notes: 'Retirer les feuilles et vérifier le panier.',
-      ),
-      _PlanningTask(
-        id: 'task_2',
-        title: 'Tester l\'eau (pH/chlore)',
-        startTime: DateTime(now.year, now.month, now.day + 2, 9, 0),
-        endTime: DateTime(now.year, now.month, now.day + 2, 9, 30),
-        color: Colors.lightBlue.shade600,
-      ),
-      _PlanningTask(
-        id: 'task_3',
-        title: 'Inspection de la pompe',
-        startTime: DateTime(now.year, now.month, now.day + 3, 10, 15),
-        endTime: DateTime(now.year, now.month, now.day + 3, 11, 0),
-        color: Colors.green.shade600,
-      ),
-    ]);
-    _sortPlanning();
+  Future<String> _requireToken() async {
+    final token = await TokenStorage.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Session expirée, veuillez vous reconnecter.');
+    }
+    return token;
+  }
+
+  bool _toBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) {
+      final v = value.toLowerCase();
+      return v == '1' || v == 'true';
+    }
+    return false;
+  }
+
+  DateTime _parseApiDate(dynamic value, {DateTime? fallback}) {
+    if (value == null) return fallback ?? DateTime.now();
+    final raw = value.toString().trim();
+    if (raw.isEmpty) return fallback ?? DateTime.now();
+    return DateTime.tryParse(raw.replaceFirst(' ', 'T')) ??
+        fallback ??
+        DateTime.now();
+  }
+
+  Color _colorFromTitle(String title) {
+    final t = title.toLowerCase();
+    if (t.contains('analyse') || t.contains('chlore') || t.contains('ph')) {
+      return Colors.lightBlue.shade600;
+    }
+    if (t.contains('pompe') || t.contains('equipement')) {
+      return Colors.green.shade600;
+    }
+    if (t.contains('traitement') || t.contains('produit')) {
+      return Colors.deepOrange.shade400;
+    }
+    return Colors.amber.shade700;
+  }
+
+  _PlanningTask? _taskFromApi(dynamic item) {
+    if (item is! Map) return null;
+    final id = item['id']?.toString();
+    if (id == null || id.isEmpty) return null;
+
+    final start = _parseApiDate(item['startTime']);
+    final end = _parseApiDate(
+      item['endTime'],
+      fallback: start.add(const Duration(hours: 1)),
+    );
+
+    final title = (item['title'] ?? '').toString().trim();
+    return _PlanningTask(
+      id: id,
+      title: title.isEmpty ? 'Nouvelle tâche' : title,
+      startTime: start,
+      endTime: end,
+      color: _colorFromTitle(title),
+      notes: (item['notes'] ?? '').toString(),
+      isDone: _toBool(item['isDone']),
+    );
+  }
+
+  Future<void> _loadPlannings() async {
+    setState(() {
+      _isLoading = true;
+      _loadingError = null;
+    });
+
+    try {
+      final token = await _requireToken();
+      final response = await _planningService.getAllPlanning(token);
+      final data = response['data'];
+
+      final List<_PlanningTask> fetched = [];
+      if (data is List) {
+        for (final item in data) {
+          final parsed = _taskFromApi(item);
+          if (parsed != null) fetched.add(parsed);
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _planningItems
+          ..clear()
+          ..addAll(fetched);
+        _sortPlanning();
+        _syncCalendarSource();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _loadingError = e.toString();
+      });
+    }
   }
 
   void _sortPlanning() {
@@ -376,11 +453,6 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
     _planningDataSource.updateAppointments(_appointmentsFromPlanning());
   }
 
-  String _nextTaskId() {
-    _taskSequence += 1;
-    return 'task_${DateTime.now().microsecondsSinceEpoch}_$_taskSequence';
-  }
-
   Future<void> _showAddPlanningSheet() async {
     if (_isAddSheetOpen) {
       return;
@@ -401,46 +473,108 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
         return;
       }
 
-      setState(() {
-        _planningItems.add(
-          _PlanningTask(
-            id: _nextTaskId(),
-            title: draft.title,
-            notes: draft.notes,
-            startTime: draft.startTime,
-            endTime: draft.endTime,
-            color: draft.color,
-          ),
-        );
-        _sortPlanning();
-        _syncCalendarSource();
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Planning ajouté avec succès')),
-      );
+      await _addPlanning(draft);
     } finally {
       _isAddSheetOpen = false;
     }
   }
 
-  void _toggleDone(String id) {
-    final index = _planningItems.indexWhere((item) => item.id == id);
+  Future<void> _addPlanning(_PlanningDraft draft) async {
+    setState(() => _isSaving = true);
+    try {
+      final token = await _requireToken();
+      final response = await _planningService.addPlanning(
+        token,
+        title: draft.title,
+        startTime: draft.startTime,
+        endTime: draft.endTime,
+        notes: draft.notes,
+      );
+
+      final created = _taskFromApi(response['data']);
+      if (!mounted) return;
+
+      setState(() {
+        if (created != null) {
+          _planningItems.add(created);
+          _sortPlanning();
+          _syncCalendarSource();
+        }
+      });
+
+      if (created == null) {
+        await _loadPlannings();
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Planning ajouté avec succès')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur ajout planning: $e')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _toggleDone(_PlanningTask item) async {
+    final index = _planningItems.indexWhere((it) => it.id == item.id);
     if (index < 0) {
       return;
     }
-    setState(() {
-      final item = _planningItems[index];
-      _planningItems[index] = item.copyWith(isDone: !item.isDone);
-      _syncCalendarSource();
-    });
+
+    setState(() => _isSaving = true);
+    try {
+      final token = await _requireToken();
+      final response = await _planningService.updatePlanning(
+        token,
+        int.parse(item.id),
+        isDone: !item.isDone,
+      );
+
+      final updated = _taskFromApi(response['data']);
+      if (!mounted) return;
+      setState(() {
+        _planningItems[index] = updated ?? item.copyWith(isDone: !item.isDone);
+        _sortPlanning();
+        _syncCalendarSource();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur mise à jour: $e')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
-  void _removePlanning(String id) {
-    setState(() {
-      _planningItems.removeWhere((item) => item.id == id);
-      _syncCalendarSource();
-    });
+  Future<void> _removePlanning(_PlanningTask item) async {
+    setState(() => _isSaving = true);
+    try {
+      final token = await _requireToken();
+      await _planningService.deletePlanning(token, int.parse(item.id));
+
+      if (!mounted) return;
+      setState(() {
+        _planningItems.removeWhere((it) => it.id == item.id);
+        _syncCalendarSource();
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Planning supprimé')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur suppression: $e')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   Future<void> _showPlanningActions(_PlanningTask item) async {
@@ -478,7 +612,7 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _toggleDone(item.id);
+                    _toggleDone(item);
                   },
                 ),
                 ListTile(
@@ -492,7 +626,7 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _removePlanning(item.id);
+                    _removePlanning(item);
                   },
                 ),
               ],
@@ -596,13 +730,17 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: _buttonOption == ButtonOption.calendar
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _loadingError != null && _planningItems.isEmpty
+                  ? _buildLoadingError()
+                  : _buttonOption == ButtonOption.calendar
                   ? _buildCalendarPlanning()
                   : _buildListPlanning(),
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
-              onPressed: _showAddPlanningSheet,
+              onPressed: _isSaving ? null : _showAddPlanningSheet,
               icon: const Icon(Icons.add),
               label: const Text('Ajouter un planning'),
             ),
@@ -684,6 +822,40 @@ class _PlanningEntretienScreenState extends State<PlanningEntretienScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLoadingError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 36),
+            const SizedBox(height: 10),
+            Text(
+              'Impossible de charger le planning',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _loadingError ?? '',
+              style: const TextStyle(color: Colors.white70),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: _loadPlannings,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
