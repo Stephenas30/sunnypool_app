@@ -27,15 +27,17 @@ class AnalyseService {
     /* [dynamic thread_id] */
   ) async {
     //print(thread_id);
-    
-      //thread_id ??= sessionId;
+
+    //thread_id ??= sessionId;
     final hasInternet = await InternetService().hasInternet();
 
     if (!hasInternet) {
       throw ('Aucune connexion Internet');
     }
-  
-    final photoBase64 = await _toBase64IfFilePath(analyse.photo_bandelette_base64?.path);
+
+    final photoBase64 = await _toBase64IfFilePath(
+      analyse.photo_bandelette_base64?.path,
+    );
 
     final response = await http.post(
       Uri.parse("$baseUrl/analyse"),
@@ -58,22 +60,50 @@ class AnalyseService {
     }
   }
 
-    Future<Map<String, dynamic>> sendAnalysePhoto(
+  Future<Map<String, dynamic>> sendAnalysePhoto(
     String token,
     //String sessionId,
     AnalyseModel analyse,
-    /* [dynamic thread_id] */
   ) async {
     //print(thread_id);
-      
-      //thread_id ??= sessionId;
+
+    //thread_id ??= sessionId;
     final hasInternet = await InternetService().hasInternet();
 
     if (!hasInternet) {
       throw ('Aucune connexion Internet');
     }
-  
-    final photoBase64 = await _toBase64IfFilePath(analyse.photo_bandelette_base64?.path);
+
+    String? photoBase64;
+    List<Map<String, dynamic>>? images;
+    Map<String, dynamic> formattedBody = {};
+
+    if (analyse.photo_bandelette_base64 != null) {
+      photoBase64 = await _toBase64IfFilePath(
+        analyse.photo_bandelette_base64?.path,
+      );
+      formattedBody = {
+        "pool_id": analyse.pool_id,
+        "image_base64": photoBase64,
+        "image_type": analyse.type,
+      };
+    }
+
+    if (analyse.images != null) {
+      images = [];
+      for (final image in analyse.images!) {
+        images.add({
+          "type": image.imageType,
+          "label": image.title,
+          "base64": await _toBase64IfFilePath(image.file.path),
+        });
+      }
+
+      formattedBody = {
+        "pool_id": analyse.pool_id,
+        "images": images
+      };
+    }
 
     final response = await http.post(
       Uri.parse("$baseUrl/analyse/photo"),
@@ -81,11 +111,7 @@ class AnalyseService {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
       },
-      body: jsonEncode({
-        "pool_id": analyse.pool_id,
-        "image_base64": photoBase64,
-        "image_type": "test_strip"
-      }),
+      body: jsonEncode(formattedBody),
     );
 
     if (response.statusCode == 201) {
@@ -95,7 +121,6 @@ class AnalyseService {
       throw Exception("Erreur de connexion : \\${response.body}");
     }
   }
-
 
   Future<Map<String, dynamic>> responseAnalyse(
     String token,
@@ -107,13 +132,13 @@ class AnalyseService {
       throw ('Aucune connexion Internet');
     }
     print(analyseId);
-    
+
     final response = await http.get(
       Uri.parse("$baseUrl/analyse/poll?analyse_id=$analyseId"),
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
-      }
+      },
     );
 
     if (response.statusCode == 200) {
@@ -124,12 +149,7 @@ class AnalyseService {
     }
   }
 
-
-  Future<Map<String, dynamic>> getAllAnalyse(
-    String token,
-    int poolId,
-  ) async {
-
+  Future<Map<String, dynamic>> getAllAnalyse(String token, int poolId) async {
     final hasInternet = await InternetService().hasInternet();
 
     if (!hasInternet) {
@@ -151,6 +171,4 @@ class AnalyseService {
       throw Exception("Erreur de connexion : \\${response.body}");
     }
   }
-
-
 }

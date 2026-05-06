@@ -98,14 +98,16 @@ class Filtration {
 }
 
 class PhotoPool {
-  final String photoBassin;
-  final String photoEnvironnement;
-  final String photoLocalTechn;
+  final String photoPool;
+  final String? photoBassin;
+  final String? photoEnvironnement;
+  final String? photoLocalTechn;
 
   PhotoPool({
-    required this.photoBassin,
-    required this.photoEnvironnement,
-    required this.photoLocalTechn,
+    required this.photoPool,
+     this.photoBassin,
+     this.photoEnvironnement,
+     this.photoLocalTechn,
   });
 }
 

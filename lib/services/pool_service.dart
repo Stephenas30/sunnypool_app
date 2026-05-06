@@ -67,25 +67,7 @@ class PoolService {
     
     print(token);
 
-    final imageBase64 = await _toBase64IfFilePath(pool.photoPool!.photoBassin);
-
-
-    /* dynamic poolData = jsonEncode({
-        "nom_piscine": pool.name,
-        "type_piscine": pool.type.name,
-        "longueur": pool.dimension.length,
-        "largeur": pool.dimension.width,
-        "profondeur": pool.dimension.depth,
-        "adresse": pool.location.adresse,
-        "code_postal": pool.location.codePostal,
-        "ville": pool.location.ville,
-        "pays": pool.location.pays,
-        "image_base64": imageBase64,
-      });
-
-      print(poolData);
-
-      return poolData; */
+    final imageBase64 = await _toBase64IfFilePath(pool.photoPool!.photoPool);
 
     final response = await http.post(
       Uri.parse("$baseUrl/pool"),

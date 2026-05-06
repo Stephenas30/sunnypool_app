@@ -82,10 +82,11 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                       ),
                     ),
                     photoPool: PhotoPool(
-                      photoBassin:
+                      photoPool: item['photos']?[0]?['full'] ?? '',
+                      /* photoBassin:
                           item['photos']?[0]?['url'] ?? 'assets/piscine.png',
                       photoEnvironnement: item['photos']?[0]?['full'] ?? '',
-                      photoLocalTechn: item['photos']?[0]?['thumbnail'] ?? '',
+                      photoLocalTechn: item['photos']?[0]?['thumbnail'] ?? '', */
                     ),
                   ),
                 );
@@ -312,7 +313,7 @@ class _MypiscineScreen extends State<MypiscineScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(18),
                 child: Image.network(
-                  pool.photoPool?.photoBassin ?? 'assets/piscine.png',
+                  pool.photoPool?.photoPool ?? 'assets/piscine.png',
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,

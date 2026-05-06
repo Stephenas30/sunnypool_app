@@ -5,13 +5,13 @@ import 'package:sunnypool_app/models/conversation_model.dart';
 import 'package:sunnypool_app/models/dossier_model.dart';
 import 'package:sunnypool_app/models/message_model.dart';
 import 'package:sunnypool_app/screens/login_screen.dart';
-import 'package:sunnypool_app/screens/profile_screen.dart';
 import 'package:sunnypool_app/services/folder_thread_service.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/services/sunny_service.dart';
 import 'package:sunnypool_app/utils/poolId_storage.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
 import 'package:sunnypool_app/widget/appBar_widget.dart';
+import 'package:sunnypool_app/widget/typing_indicator_widget.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -46,7 +46,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   final TextEditingController _messageController = TextEditingController();
   final TextEditingController _folderNameController = TextEditingController();
 
-  final List<Map<String, String>> _messages = [];
+  final List<Map<String, dynamic>> _messages = [];
 
   String? sessionId;
   int? thread_id;
@@ -60,6 +60,18 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   List<DossierModel> listDossiers = [];
   bool listDossierActive = false;
   bool addFolder = false;
+  bool _isLoadingFolder = false;
+  bool _activeWrap = false;
+  File? _imagePool;
+  final Map<String, bool> _optionSend = {
+    'meteo': false,
+    'historique': true,
+    'produits': false,
+    'alertes': true,
+    'planning': true,
+    'coordonnees': true,
+    'mesure de l\'eau': false,
+  };
   DossierModel? selectedDossier;
   DossierModel? renamedDossier;
 
@@ -158,7 +170,6 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   Widget _buildDrawerChat() {
     final screenWidth = MediaQuery.of(context).size.width;
     final theme = Theme.of(context);
-    bool isLoadingFolder = false;
 
     return Drawer(
       backgroundColor: const Color(0xFF111111),
@@ -250,7 +261,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                       ? const SizedBox.shrink()
                       : Flexible(
                           fit: FlexFit.loose,
-                          child: isLoadingFolder
+                          child: _isLoadingFolder
                               ? const Center(
                                   child: CircularProgressIndicator(
                                     color: Colors.amber,
@@ -512,23 +523,14 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     const Duration pollInterval = Duration(seconds: 2);
     final screenWidth = MediaQuery.of(context).size.width;
     final ImagePicker picker = ImagePicker();
-    bool activeWrap = false;
     File? imagePool;
-    Map<String, bool> optionSend = {
-      'meteo': false,
-      'historique': true,
-      'produits': false,
-      'alertes': true,
-      'planning': true,
-      'coordonnees': true,
-      'mesure de l\'eau': false,
-    };
 
     Future<void> pickImage(ImageSource source) async {
       final XFile? photo = await picker.pickImage(source: source);
+      if (photo == null) return;
 
       setState(() {
-        imagePool = File(photo!.path);
+        _imagePool = File(photo.path);
       });
     }
 
@@ -617,7 +619,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               MessageModel(
                 message: userMessage,
                 image: image?.path,
-                data_options: optionSend,
+                data_options: _optionSend,
               ),
               thread_id,
             )
@@ -629,8 +631,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                     _messages.add({
                       'id': uuid.v1(),
                       'role': 'assistant',
-                      'text': 'En cours de traitement. Merci de patienter...',
+                      'text': '',
+                      'widget': TypingIndicator()
                     });
+                    print('En cours de traitement. Merci de patienter...');
                     _isLoading = false;
                     thread_id ??= thread_id = response['thread_id'];
                   });
@@ -807,13 +811,13 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                           ),
                         GestureDetector(
                           onLongPress: () => showOptions(id),
-                          onTap: () {
+                          /* onTap: () {
                             if (isSelected) {
                               hideOptions();
                             } else {
                               showOptions(id);
                             }
-                          },
+                          }, */
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -842,6 +846,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                   ],
                                 ),
                               ],
+                              msg['text'] != '' ?
                               Container(
                                 margin: const EdgeInsets.symmetric(vertical: 5),
                                 padding: const EdgeInsets.symmetric(
@@ -868,7 +873,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                     color: isUser ? Colors.black : Colors.white,
                                   ),
                                 ),
-                              ),
+                              ) : TypingIndicator()
                             ],
                           ),
                         ),
@@ -879,16 +884,22 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               ),
             ),
             if (_isLoading)
-              const Padding(
+              const Align(
+                alignment: Alignment.center,
+                
+                child: TypingIndicator(),
+              ),
+
+            /* const Padding(
                 padding: EdgeInsets.all(8.0),
                 child: CircularProgressIndicator(color: Colors.amber),
-              ),
+              ), */
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 6, 10, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  imagePool != null
+                  _imagePool != null
                       ? Stack(
                           children: [
                             Container(
@@ -898,7 +909,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                               decoration: BoxDecoration(
                                 //borderRadius: BorderRadius.circular(12),
                                 image: DecorationImage(
-                                  image: FileImage(imagePool!),
+                                  image: FileImage(_imagePool!),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -909,7 +920,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                               child: GestureDetector(
                                 onTap: () {
                                   setState(() {
-                                    imagePool = null;
+                                    _imagePool = null;
                                   });
                                 },
                                 child: const CircleAvatar(
@@ -931,7 +942,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      activeWrap
+                      _activeWrap
                           ? Wrap(
                               spacing: 0,
                               direction: Axis.vertical,
@@ -950,7 +961,6 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                   'produits',
                                   'mesure de l\'eau',
                                 ].map((item) {
-                                  //final selected = optionSendChecked.contains(item);
                                   return FilterChip(
                                     label: Text(
                                       item.toUpperCase(),
@@ -958,11 +968,11 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                         fontSize: screenWidth * 0.02,
                                       ),
                                     ),
-                                    selected: optionSend[item]!,
+                                    selected: _optionSend[item]!,
                                     selectedColor: Colors.amber,
                                     checkmarkColor: Colors.black,
                                     labelStyle: TextStyle(
-                                      color: optionSend[item]!
+                                      color: _optionSend[item]!
                                           ? Colors.black
                                           : Colors.white,
                                       fontWeight: FontWeight.w600,
@@ -970,14 +980,14 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                     side: const BorderSide(color: borderColor),
                                     onSelected: (_) {
                                       setState(() {
-                                        optionSend[item] = !optionSend[item]!;
+                                        _optionSend[item] = !_optionSend[item]!;
                                       });
                                     },
                                   );
                                 }),
                               ],
                             )
-                          : SizedBox.shrink(),
+                          : const SizedBox.shrink(),
 
                       Row(
                         children: [
@@ -1011,7 +1021,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      activeWrap = !activeWrap;
+                                      _activeWrap = !_activeWrap;
                                     });
                                   },
                                 ),
@@ -1279,7 +1289,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       );
     }
 
-    Future<void> renamedConversation(
+    Future<void> renameConversation(
       ConversationModel conversation,
       String newTitle,
     ) async {
@@ -1308,7 +1318,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: renamedConversation == conversation
+              child: this.renamedConversation == conversation
                   ? TextField(
                       style: const TextStyle(color: Colors.white),
                       decoration: const InputDecoration(
@@ -1325,7 +1335,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                           this.renamedConversation = null;
                         });
                         if (e.trim() != '') {
-                          renamedConversation(conversation, e);
+                          renameConversation(conversation, e);
                         }
                       },
                       //),
@@ -1453,6 +1463,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   void _fetchFolderThread() async {
     if (!listDossierActive) return;
 
+    setState(() {
+      _isLoadingFolder = true;
+    });
+
     var token = await TokenStorage.getToken();
     var poolId = await PoolIdStorage.getPoolId();
 
@@ -1483,7 +1497,13 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {}
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingFolder = false;
+        });
+      }
+    }
   }
 
   void _handleNewFolder(String name) async {
@@ -1587,6 +1607,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   @override
   void dispose() {
     _messageController.dispose();
+    _folderNameController.dispose();
     _messagesScrollController.dispose();
     super.dispose();
   }

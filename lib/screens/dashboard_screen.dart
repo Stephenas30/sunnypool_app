@@ -62,8 +62,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         PoolService()
             .getAllPool(tokenValue.toString())
             .then((Map<String, dynamic> pools) {
-              PoolIdStorage.savePoolId(pools['data'][0]['id'].toString());
               print(pools['data'][0]['id'].toString());
+              PoolIdStorage.savePoolId(pools['data'][0]['id'].toString());
+              
               Pool pool = Pool(
                 id: pools['data'][0]['id'].toString(),
                 name: pools['data'][0]['titre'] ?? 'not name',
@@ -93,13 +94,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 photoPool: PhotoPool(
-                  photoBassin:
+                  photoPool: pools['data'][0]['photos']?[0]?['full'] ?? '',
+                  /* photoBassin:
                       pools['data'][0]['photos']?[0]?['url'] ??
                       'assets/piscine.png',
                   photoEnvironnement:
                       pools['data'][0]['photos']?[0]?['full'] ?? '',
                   photoLocalTechn:
-                      pools['data'][0]['photos']?[0]?['thumbnail'] ?? '',
+                      pools['data'][0]['photos']?[0]?['thumbnail'] ?? '', */
                 ),
               );
               setState(() {
@@ -382,7 +384,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             borderRadius: BorderRadius.circular(12),
                             image: DecorationImage(
                               image: NetworkImage(
-                                checkPool?.photoPool?.photoBassin ??
+                                checkPool?.photoPool?.photoPool ??
                                     'assets/piscine.png',
                               ),
                               fit: BoxFit.cover,

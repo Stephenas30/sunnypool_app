@@ -197,6 +197,7 @@ class _AnalyseScreenState extends State<AnalyseScreen> {
               AnalyseModel(
                 pool_id: int.tryParse(poolId!),
                 photo_bandelette_base64: imageBandelette,
+                type: 'test_strip'
               ),
             )
             .then((response) async {

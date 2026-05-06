@@ -29,7 +29,6 @@ class AddPiscineScreen extends StatefulWidget {
 }
 
 class _AddPiscineScreen extends State<AddPiscineScreen> {
-
   final _formKey = GlobalKey<FormState>();
   final _formKey2 = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
@@ -76,10 +75,12 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
 
   List<Traitement> traitementChecked = [Traitement.chlore];
 
+  File? photoPool;
+  /* 
   File? imageEnsemble;
   File? imageEau;
   File? imageLocal;
-  File? imageEquipements;
+  File? imageEquipements; */
 
   Location? location;
 
@@ -265,11 +266,12 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     );
   }
 
-  Future<void> _takePhoto(String imageType) async {
-
-    PickImage(onImagePicked: (File photo) {
-      setState(() {
-        switch (imageType) {
+  Future<void> _takePhoto(/* String imageType */) async {
+    PickImage(
+      onImagePicked: (File photo) {
+        setState(() {
+          photoPool = photo;
+          /* switch (imageType) {
           case 'Vue d\'ensemble':
             imageEnsemble = photo;
             break;
@@ -282,9 +284,11 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
           case 'Equipements':
           imageEquipements = File(photo.path);
           break;
-        }
-      });
-    }, context: context).showImageSourceSheet();
+        } */
+        });
+      },
+      context: context,
+    ).showImageSourceSheet();
 
     /* final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo == null) return;
@@ -601,9 +605,10 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
         type: typeFiltre,
       ),
       photoPool: PhotoPool(
-        photoBassin: imageEnsemble?.path ?? '',
+        photoPool: photoPool?.path ?? '',
+        /* photoBassin: imageEnsemble?.path ?? '',
         photoEnvironnement: imageEau?.path ?? '',
-        photoLocalTechn: imageLocal?.path ?? '',
+        photoLocalTechn: imageLocal?.path ?? '', */
       ),
       location: Location(
         latitude: location?.latitude ?? 0,
@@ -620,7 +625,11 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
       var response = await PoolService().addPool(token.toString(), newPool);
 
       for (var product in _addedProducts) {
-        await ProductService().addProduct(token.toString(), product, idPool: response['data']['id'].toString());
+        await ProductService().addProduct(
+          token.toString(),
+          product,
+          idPool: response['data']['id'].toString(),
+        );
       }
 
       if (!mounted) return;
@@ -804,14 +813,17 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                           'Renseignez les informations essentielles pour un suivi précis et personnalisé.',
                       child: Row(
                         children: [
-                          Image.asset('assets/logo.png', height: screenWidth * 0.05),
+                          Image.asset(
+                            'assets/logo.png',
+                            height: screenWidth * 0.05,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Complétez les 5 étapes pour finaliser votre espace.',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: Colors.white70,
-                                fontSize: screenWidth * 0.03
+                                fontSize: screenWidth * 0.03,
                               ),
                             ),
                           ),
@@ -978,6 +990,36 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                 ],
               ),
             ),
+            _buildSectionCard(
+              title: 'Photo de la piscine',
+                child: Column(
+                  children: [
+                    if (photoPool != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(photoPool!.path),
+                          height: 250,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        _takePhoto();
+                      },
+
+                      icon: const Icon(Icons.photo),
+
+                      label: const Text("Ajouter une photo"),
+                    ),
+                  ],
+                ),
+              ),
+            
           ],
         ),
       ),
@@ -1187,7 +1229,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     );
   }
 
-  Widget _buildFormPhoto() {
+  /* Widget _buildFormPhoto() {
     final photos = [
       {'title': 'Vue d\'ensemble', 'image': imageEnsemble},
       {'title': 'Eau de la piscine', 'image': imageEau},
@@ -1225,9 +1267,9 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
         ),
       ),
     );
-  }
+  } */
 
-  Widget _buildCardPhoto(String title, File? image) {
+  /* Widget _buildCardPhoto(String title, File? image) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1296,7 +1338,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
         ),
       ),
     );
-  }
+  } */
 
   Widget _buildFormLocation() {
     return SingleChildScrollView(
@@ -1509,27 +1551,25 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
             ),
           ),
           const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isAddingProduct ? null : _addProduct,
-                    icon: _isAddingProduct
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.black,
-                            ),
-                          )
-                        : const Icon(Icons.save),
-                    label: Text(
-                      _isAddingProduct
-                          ? 'Ajout en cours...'
-                          : 'Ajouter ce produit',
-                    ),
-                  ),
-                ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isAddingProduct ? null : _addProduct,
+              icon: _isAddingProduct
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
+                  : const Icon(Icons.save),
+              label: Text(
+                _isAddingProduct ? 'Ajout en cours...' : 'Ajouter ce produit',
+              ),
+            ),
+          ),
           const SizedBox(height: 12),
           _buildSectionCard(
             title: 'Produits ajoutés (${_addedProducts.length})',
@@ -1545,9 +1585,9 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     return switch (_currentStep) {
       0 => _buildFormPool(),
       1 => _buildFormTraitement(),
-      2 => _buildFormPhoto(),
-      3 => _buildFormLocation(),
-      4 => buildAddProduct(),
+      /* 2 => _buildFormPhoto(), */
+      2 => _buildFormLocation(),
+      3 => buildAddProduct(),
       _ => const SizedBox.shrink(),
     };
   }
@@ -1557,7 +1597,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
     final List<String> steps = [
       'Piscine',
       'Traitements',
-      'Photos',
+      /* 'Photos', */
       'Localisation',
       'Produit',
     ];
@@ -1580,7 +1620,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
                 style: TextStyle(
                   color: Colors.white70,
                   fontWeight: FontWeight.w600,
-                  fontSize: screenWidth * 0.03
+                  fontSize: screenWidth * 0.03,
                 ),
               ),
             ),
