@@ -523,7 +523,6 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     const Duration pollInterval = Duration(seconds: 2);
     final screenWidth = MediaQuery.of(context).size.width;
     final ImagePicker picker = ImagePicker();
-    File? imagePool;
 
     Future<void> pickImage(ImageSource source) async {
       final XFile? photo = await picker.pickImage(source: source);
@@ -700,22 +699,22 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     }
 
     void sendMessage(String text) {
-      if (text.isEmpty && imagePool == null) return;
+      if (text.isEmpty && _imagePool == null) return;
 
-      var genSession = uuid.v4();
+      final messageId = uuid.v4();
 
       setState(() {
-        getAIResponse(text, imagePool);
-        sessionId = genSession;
+        sessionId = messageId;
         _messages.add({
-          'id': genSession,
+          'id': messageId,
           'role': 'user',
           'text': text,
-          'image': imagePool?.path ?? '',
+          'image': _imagePool?.path ?? '',
         });
         _isLoading = true;
-        imagePool = null;
+        _imagePool = null;
       });
+      getAIResponse(text, _imagePool);
       _scrollToBottom();
       _messageController.clear();
     }
