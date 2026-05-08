@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sunnypool_app/services/user_service.dart';
 import 'historique_analyses.dart';
 import 'personal_info_screen.dart';
 import 'change_password_screen.dart';
@@ -14,10 +15,14 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  static const int _fallbackUserId = 1;
   bool _notificationsEnabled = true;
   String _displayName = 'Thomas Dupont';
   String _displayEmail = 'thomas.dup***@email.com';
   var _avatar = "assets/icon.png";
+  bool _isLoading = true;
+    int _userId = _fallbackUserId;
+    final UserService _userService = UserService();
 
   @override
   void initState() {
@@ -27,14 +32,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfilePreferences() async {
     final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-      _displayName = prefs.getString('profile_full_name') ?? 'Thomas Dupont';
+    _userId = prefs.getInt('user_id') ?? _fallbackUserId;
+
+    try {
+      final user = await _userService.getUser(_userId);
+
+      //print(user);
+      setState(() {
+        _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      _displayName =
+          (user['full_name'] ?? user['name'] ?? user['display_name'] ?? '').toString().trim();
+      _displayEmail = (user['email'] ?? '').toString().trim();
+      _avatar = user['avatar'] ?? '' ?? _avatar;
+      });
+      
+      var _phone = (user['phone'] ?? '').toString().trim();
+
+      await prefs.setString('profile_full_name', _displayName);
+      await prefs.setString('profile_email', _displayEmail);
+      await prefs.setString('profile_phone', _phone);
+      //await prefs.setString('avatar', );
+    } catch (_) {
+      _displayName =
+          prefs.getString('profile_full_name') ?? 'Thomas Dupont';
       _displayEmail =
           prefs.getString('profile_email') ?? 'thomas.dup***@email.com';
-      _avatar = prefs.getString('avatar') ?? _avatar;
-    });
+      //_phone = prefs.getString('profile_phone') ?? '';
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Impossible de charger le profil distant, affichage des données locales.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _setNotificationValue(bool value) async {
@@ -58,7 +96,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: SafeArea(
+        child: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Center(

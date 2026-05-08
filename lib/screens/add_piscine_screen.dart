@@ -312,7 +312,22 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
   }
 
   Future<void> _takePhotoProd(String imageType) async {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    PickImage(
+      onImagePicked: (File photo) {
+        setState(() {
+      switch (imageType) {
+        case 'Face avant':
+          photoFace = File(photo.path);
+          break;
+        case 'Étiquette':
+          photoNoticeDosage = File(photo.path);
+          break;
+      }
+    });
+      },
+      context: context,
+    ).showImageSourceSheet();
+    /* final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo == null) return;
 
     setState(() {
@@ -324,7 +339,7 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
           photoNoticeDosage = File(photo.path);
           break;
       }
-    });
+    }); */
   }
 
   Future<void> _loadLocation() async {

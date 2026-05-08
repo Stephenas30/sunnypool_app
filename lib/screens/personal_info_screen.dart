@@ -30,6 +30,20 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     final prefs = await SharedPreferences.getInstance();
     _userId = prefs.getInt('user_id') ?? _fallbackUserId;
 
+    if (!mounted) return;
+    setState(() {
+      _fullNameController.text = prefs.getString('profile_full_name') ?? 'Thomas Dupont';
+      _emailController.text =
+          prefs.getString('profile_email') ?? 'thomas.dup***@email.com';
+      _phoneController.text = prefs.getString('profile_email') ?? 'thomas.dup***@email.com';
+      _isLoading = false;
+    });
+  }
+
+  /* Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    _userId = prefs.getInt('user_id') ?? _fallbackUserId;
+
     try {
       final user = await _userService.getUser(_userId);
 
@@ -65,7 +79,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         setState(() => _isLoading = false);
       }
     }
-  }
+  } */
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;

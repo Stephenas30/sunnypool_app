@@ -110,7 +110,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     });
 
     if (folder_id != null) {
-      _fetchThreadByFolder(folder_id);
+      await _fetchThreadByFolder(folder_id);
       return;
     }
 
@@ -160,6 +160,66 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       setState(() {
         _isLoadingConversation = false;
       });
+    }
+  }
+
+  int? _parseId(dynamic value) => int.tryParse((value ?? '').toString());
+
+  void _showSnack(
+    String message, {
+    bool isError = false,
+    Duration duration = const Duration(seconds: 2),
+  }) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: duration,
+      ),
+    );
+  }
+
+  Future<void> _refreshConversationList() async {
+    final folderId = _parseId(selectedDossier?.id);
+    if (folderId != null) {
+      await _fetchThreadByFolder(folderId);
+      return;
+    }
+    await _getAllConversation();
+  }
+
+  Future<void> _loadFoldersIfNeeded() async {
+    if (listDossiers.isNotEmpty || _isLoadingFolder) return;
+    final bool wasExpanded = listDossierActive;
+    if (!wasExpanded) {
+      setState(() {
+        listDossierActive = true;
+      });
+    }
+    await _fetchFolderThread();
+    if (!wasExpanded && mounted) {
+      setState(() {
+        listDossierActive = false;
+      });
+    }
+  }
+
+  Future<void> _addThreadToFolder({
+    required int folderId,
+    required int threadId,
+    bool showSuccess = true,
+  }) async {
+    final token = await TokenStorage.getToken();
+    if (token == null || token.isEmpty) {
+      _showSnack('Session expirée. Veuillez vous reconnecter.', isError: true);
+      return;
+    }
+
+    await FolderThreadServicce().addThreadToFolder(token, folderId, threadId);
+
+    if (showSuccess) {
+      _showSnack('Discussion ajoutée au dossier.');
     }
   }
 
@@ -790,9 +850,14 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                             TextEditingController(text: dossier.name), */
                                                     onSubmitted: (e) {
                                                       setState(() {
-                                                        //dossier.name = e;
                                                         renamedDossier = null;
                                                       });
+                                                      if (e.trim().isNotEmpty) {
+                                                        _renameDossier(
+                                                          dossier,
+                                                          e.trim(),
+                                                        );
+                                                      }
                                                     },
                                                     //),
                                                   )
@@ -827,8 +892,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                               setState(() {
                                                 selectedDossier = dossier;
                                               });
-                                              _fetchThreadByFolder(
-                                                int.tryParse(dossier.id)!,
+                                              _getAllConversation(
+                                                folder_id: int.tryParse(
+                                                  dossier.id,
+                                                )!,
                                               );
                                             },
                                           );
@@ -867,14 +934,11 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                           ),
                                           onPressed: () {
                                             setState(() {
-                                              setState(() {
-                                                sessionId = null;
-                                                _messages.clear();
-                                                //listDossierActive = false;
-                                                //selectedDossier = null;
-                                              });
-                                              Navigator.pop(context);
+                                              sessionId = null;
+                                              thread_id = null;
+                                              _messages.clear();
                                             });
+                                            Navigator.pop(context);
                                           },
                                           child: Text(
                                             'Nouveau message dans ${selectedDossier?.name}',
@@ -898,10 +962,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                         : RefreshIndicator(
                             color: Colors.amber,
                             onRefresh: () async {
-                              setState(() {
-                                _isLoadingConversation = true;
-                              });
-                              await _getAllConversation();
+                              await _refreshConversationList();
                             },
                             child: ListView.separated(
                               physics: const AlwaysScrollableScrollPhysics(
@@ -1034,6 +1095,8 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
             .then((response) async {
               try {
                 print(response);
+                final bool isNewThread = thread_id == null;
+                final int? createdThreadId = _parseId(response['thread_id']);
                 if (response['response'] == "pending") {
                   setState(() {
                     _messages.add({
@@ -1044,10 +1107,30 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                     });
                     print('En cours de traitement. Merci de patienter...');
                     _isLoading = false;
-                    thread_id ??= thread_id = response['thread_id'];
+                    thread_id ??= createdThreadId;
                   });
                   _scrollToBottom();
                 }
+
+                final int? folderId = _parseId(selectedDossier?.id);
+                if (isNewThread &&
+                    folderId != null &&
+                    createdThreadId != null) {
+                  try {
+                    await _addThreadToFolder(
+                      folderId: folderId,
+                      threadId: createdThreadId,
+                      showSuccess: false,
+                    );
+                  } catch (error) {
+                    _showSnack(
+                      'Discussion créée, mais ajout au dossier impossible.',
+                      isError: true,
+                    );
+                    print(error);
+                  }
+                }
+
                 final finalResponse = await pollUntilCompleted(
                   token,
                   response['conversation_id'],
@@ -1111,19 +1194,20 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       if (text.isEmpty && _imagePool == null) return;
 
       final messageId = uuid.v4();
+      final imageToSend = _imagePool;
 
       setState(() {
-        sessionId = messageId;
+        sessionId ??= messageId;
         _messages.add({
           'id': messageId,
           'role': 'user',
           'text': text,
-          'image': _imagePool?.path ?? '',
+          'image': imageToSend?.path ?? '',
         });
         _isLoading = true;
         _imagePool = null;
       });
-      getAIResponse(text, _imagePool);
+      getAIResponse(text, imageToSend);
       _scrollToBottom();
       _messageController.clear();
     }
@@ -1163,12 +1247,8 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                     child: IconButton(
                       icon: const Icon(Icons.menu, color: Colors.amber),
                       onPressed: () => {
-                        setState(() {
-                          listDossierActive = false;
-                          selectedDossier = null;
-                        }),
-
-                        if (selectedDossier == null) _getAllConversation(),
+                        if (listConversation.isEmpty)
+                          _refreshConversationList(),
                         scaffoldKey.currentState?.openDrawer(),
                       },
                     ),
@@ -1494,6 +1574,226 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     );
   }
 
+  Future<bool> _confirmAction({
+    required String title,
+    required String message,
+    String confirmLabel = 'Confirmer',
+    bool danger = false,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: Text(title, style: const TextStyle(color: Colors.white)),
+          content: Text(message, style: const TextStyle(color: Colors.white70)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(
+                foregroundColor: danger ? Colors.red : Colors.amber,
+              ),
+              child: Text(confirmLabel),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
+  Future<void> _renameConversation(
+    ConversationModel conversation,
+    String newTitle,
+  ) async {
+    final threadId = _parseId(conversation.id);
+    if (threadId == null) return;
+
+    final token = await TokenStorage.getToken();
+    if (token == null || token.isEmpty) {
+      _showSnack('Session expirée. Veuillez vous reconnecter.', isError: true);
+      return;
+    }
+
+    try {
+      final response = await SunnyService().renameConversation(
+        token,
+        threadId,
+        newTitle,
+      );
+      _showSnack(response['message']?.toString() ?? 'Discussion renommée.');
+      await _refreshConversationList();
+    } catch (error) {
+      _showSnack('Impossible de renommer la discussion.', isError: true);
+      print(error);
+    }
+  }
+
+  Future<void> _deleteConversation(ConversationModel conversation) async {
+    final threadId = _parseId(conversation.id);
+    if (threadId == null) return;
+
+    final confirmed = await _confirmAction(
+      title: 'Supprimer la discussion',
+      message:
+          'Cette action supprimera la discussion définitivement. Continuer ?',
+      confirmLabel: 'Supprimer',
+      danger: true,
+    );
+    if (!confirmed) return;
+
+    final token = await TokenStorage.getToken();
+    if (token == null || token.isEmpty) {
+      _showSnack('Session expirée. Veuillez vous reconnecter.', isError: true);
+      return;
+    }
+
+    try {
+      final response = await SunnyService().deleteConversation(token, threadId);
+      if (thread_id == threadId) {
+        setState(() {
+          thread_id = null;
+          sessionId = null;
+          _messages.clear();
+        });
+      }
+      _showSnack(response['message']?.toString() ?? 'Discussion supprimée.');
+      await _refreshConversationList();
+    } catch (error) {
+      _showSnack('Impossible de supprimer la discussion.', isError: true);
+      print(error);
+    }
+  }
+
+  Future<void> _duplicateConversation(ConversationModel conversation) async {
+    final sourceThreadId = _parseId(conversation.id);
+    if (sourceThreadId == null) return;
+
+    final token = await TokenStorage.getToken();
+    if (token == null || token.isEmpty) {
+      _showSnack('Session expirée. Veuillez vous reconnecter.', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoadingConversation = true;
+    });
+
+    try {
+      final sourceConversation = await SunnyService().getConversation(
+        token,
+        sourceThreadId,
+      );
+      final data = sourceConversation['data'];
+      if (data is! List || data.isEmpty) {
+        _showSnack('Aucun message à dupliquer.', isError: true);
+        return;
+      }
+
+      String firstPrompt = '';
+      for (final item in data) {
+        if (item is! Map) continue;
+        final prompt = (item['message'] ?? '').toString().trim();
+        if (prompt.isNotEmpty) {
+          firstPrompt = prompt;
+          break;
+        }
+      }
+
+      if (firstPrompt.isEmpty) {
+        _showSnack('Aucun message utilisateur à dupliquer.', isError: true);
+        return;
+      }
+
+      final created = await SunnyService().sendChat(
+        token,
+        uuid.v4(),
+        MessageModel(
+          message: firstPrompt,
+          data_options: Map<String, bool>.from(_optionSend),
+        ),
+      );
+
+      final duplicatedThreadId = _parseId(created['thread_id']);
+      if (duplicatedThreadId == null) {
+        _showSnack('Duplication incomplète. Réessayez.', isError: true);
+        return;
+      }
+
+      final copyTitle = 'Copie - ${conversation.title}';
+      await SunnyService().renameConversation(
+        token,
+        duplicatedThreadId,
+        copyTitle,
+      );
+
+      final folderId = _parseId(selectedDossier?.id);
+      if (folderId != null) {
+        await _addThreadToFolder(
+          folderId: folderId,
+          threadId: duplicatedThreadId,
+          showSuccess: false,
+        );
+      }
+
+      _showSnack('Discussion dupliquée.');
+      await _refreshConversationList();
+    } catch (error) {
+      _showSnack('Impossible de dupliquer la discussion.', isError: true);
+      print(error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingConversation = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _renameDossier(DossierModel dossier, String newName) async {
+    if (newName.trim().isEmpty) return;
+
+    setState(() {
+      dossier.name = newName.trim();
+    });
+
+    _showSnack('Dossier renommé.');
+  }
+
+  Future<void> _deleteDossier(DossierModel dossier) async {
+    final confirmed = await _confirmAction(
+      title: 'Supprimer le dossier',
+      message:
+          'Le dossier sera retiré de la liste. Les discussions ne seront pas supprimées.',
+      confirmLabel: 'Supprimer',
+      danger: true,
+    );
+    if (!confirmed) return;
+
+    setState(() {
+      listDossiers.removeWhere((item) => item.id == dossier.id);
+      if (selectedDossier?.id == dossier.id) {
+        selectedDossier = null;
+      }
+    });
+
+    await _refreshConversationList();
+    _showSnack('Dossier supprimé.');
+  }
+
+  Future<void> _duplicateDossier(DossierModel dossier) async {
+    final duplicatedName = 'Copie - ${dossier.name}';
+    setState(() {
+      listDossiers.add(DossierModel(id: uuid.v1(), name: duplicatedName));
+    });
+    _showSnack('Dossier dupliqué.');
+  }
+
   Widget _buildListConversation(ConversationModel conversation) {
     final theme = Theme.of(context);
     final title = conversation.title;
@@ -1524,13 +1824,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
           ),
         );
       } catch (error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Une erreur à survenue'),
-            backgroundColor: Colors.red,
-          ),
-        );
-
+        _showSnack('Une erreur est survenue.', isError: true);
         conversation.favories = !conversation.favories;
         print(error);
       }
@@ -1547,8 +1841,17 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       Navigator.pop(context);
 
       try {
+        final token = await TokenStorage.getToken();
+        if (token == null || token.isEmpty) {
+          _showSnack(
+            'Session expirée. Veuillez vous reconnecter.',
+            isError: true,
+          );
+          return;
+        }
+
         dynamic response = await SunnyService().getConversation(
-          tokenValue!,
+          token,
           int.tryParse(threadId)!,
         );
 
@@ -1590,60 +1893,36 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       }
     }
 
-    Future<void> deletedConversation(ConversationModel conversation) async {
-      final token = await TokenStorage.getToken();
-
-      await SunnyService()
-          .deleteConversation(token!, int.tryParse(conversation.id!)!)
-          .then((onValue) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(onValue['message']),
-                backgroundColor: Colors.green,
-              ),
-            );
-            _getAllConversation();
-          });
-    }
-
-    void activateConversation(
+    Future<void> activateConversation(
       MenuEntry selection,
       ConversationModel conversation,
-    ) {
-      setState(() {
-        _lastSelection = selection;
-      });
-
+    ) async {
       switch (selection) {
         case MenuEntry.newMessage:
-          {
-            setState(() {
-              _messages.clear();
-            });
-            Navigator.pop(context);
-          }
-        /* case MenuEntry.ouvrir:
-        debugPrint('Ouvrir'); */
+          setState(() {
+            thread_id = null;
+            sessionId = null;
+            _messages.clear();
+          });
+          Navigator.pop(context);
+          break;
         case MenuEntry.renommer:
           setState(() {
             this.renamedConversation = conversation;
           });
-        //showingMessage = !showingMessage;
+          break;
         case MenuEntry.supprimer:
-          deletedConversation(conversation);
-        /* setState(() {
-          listDossiers.remove(dossier);
-        }); */
+          await _deleteConversation(conversation);
+          break;
         case MenuEntry.dupliquer:
-        /* setState(() {
-          listDossiers.add(
-            DossierModel(id: uuid.v1(), name: 'Copie: ${dossier.name}'),
-          );
-        }); */
+          await _duplicateConversation(conversation);
+          break;
         case MenuEntry.discussion:
+          selectConversation(conversation.id!);
           break;
 
         case MenuEntry.addToFolder:
+          await _loadFoldersIfNeeded();
           break;
 
         case MenuEntry.more:
@@ -1658,49 +1937,67 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         childFocusNode: buttonFocusNode,
         menuChildren: <Widget>[
           MenuItemButton(
-            onPressed: () =>
+            onPressed: () async =>
                 activateConversation(MenuEntry.renommer, conversation),
             child: Text(MenuEntry.renommer.label),
           ),
           MenuItemButton(
-            onPressed: () =>
+            onPressed: () async =>
                 activateConversation(MenuEntry.supprimer, conversation),
             child: Text(MenuEntry.supprimer.label),
           ),
           MenuItemButton(
-            onPressed: () =>
+            onPressed: () async =>
                 activateConversation(MenuEntry.dupliquer, conversation),
             child: Text(MenuEntry.dupliquer.label),
           ),
           SubmenuButton(
             menuChildren: [
-              SubmenuButton(
-                menuChildren: [
-                  ...listDossiers.map((dossier) {
-                    return MenuItemButton(
-                      onPressed: () async {
-                        var token = await TokenStorage.getToken();
-
-                        try {
-                          var response = await FolderThreadServicce()
-                              .addThreadToFolder(
-                                token!,
-                                int.tryParse(dossier.id)!,
-                                int.tryParse(conversation.id!)!,
-                              );
-                          print(response);
-                        } catch (error) {
-                          print(error);
-                        } finally {}
-                      },
-                      child: Text(dossier.name),
-                    );
-                  }),
-                ],
-                child: Text(MenuEntry.addToFolder.label),
-              ),
+              if (listDossiers.isEmpty)
+                MenuItemButton(
+                  onPressed: () async {
+                    await _loadFoldersIfNeeded();
+                  },
+                  child: const Text('Charger les dossiers'),
+                ),
+              ...listDossiers.map((dossier) {
+                return MenuItemButton(
+                  onPressed: () async {
+                    final conversationId = _parseId(conversation.id);
+                    final folderId = _parseId(dossier.id);
+                    if (conversationId == null || folderId == null) return;
+                    try {
+                      await _addThreadToFolder(
+                        folderId: folderId,
+                        threadId: conversationId,
+                      );
+                      if (selectedDossier?.id == dossier.id) {
+                        await _refreshConversationList();
+                      }
+                    } catch (error) {
+                      _showSnack(
+                        'Impossible d\'ajouter cette discussion au dossier.',
+                        isError: true,
+                      );
+                      print(error);
+                    }
+                  },
+                  child: Text(dossier.name),
+                );
+              }),
+              if (listDossiers.isEmpty)
+                const MenuItemButton(
+                  onPressed: null,
+                  child: Text('Aucun dossier disponible'),
+                ),
             ],
-            child: Text(MenuEntry.more.label),
+            child: const Text('Ajouter dans un dossier'),
+          ),
+          MenuItemButton(
+            onPressed: () async {
+              await activateConversation(MenuEntry.addToFolder, conversation);
+            },
+            child: const Text('Actualiser les dossiers'),
           ),
         ],
         builder:
@@ -1713,7 +2010,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                   height: 36,
                 ),
                 visualDensity: VisualDensity.compact,
-                onPressed: () {
+                onPressed: () async {
+                  if (!controller.isOpen && listDossiers.isEmpty) {
+                    await _loadFoldersIfNeeded();
+                  }
                   if (controller.isOpen) {
                     controller.close();
                   } else {
@@ -1724,25 +2024,6 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
               );
             },
       );
-    }
-
-    Future<void> renameConversation(
-      ConversationModel conversation,
-      String newTitle,
-    ) async {
-      final token = await TokenStorage.getToken();
-
-      await SunnyService()
-          .renameConversation(token!, int.tryParse(conversation.id!)!, newTitle)
-          .then((onValue) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(onValue['message']),
-                backgroundColor: Colors.green,
-              ),
-            );
-            _getAllConversation();
-          });
     }
 
     return InkWell(
@@ -1764,18 +2045,15 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                         border: InputBorder.none,
                       ),
                       autofocus: true,
-                      /* controller:
-                                            TextEditingController(text: dossier.name), */
                       onSubmitted: (e) {
                         setState(() {
-                          //dossier.name = e;
                           this.renamedConversation = null;
                         });
-                        if (e.trim() != '') {
-                          renameConversation(conversation, e);
+                        final newTitle = e.trim();
+                        if (newTitle.isNotEmpty) {
+                          _renameConversation(conversation, newTitle);
                         }
                       },
-                      //),
                     )
                   : Text(
                       title,
@@ -1797,7 +2075,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                           });
                           handleFavorite(conversation);
                         },
-                        icon: Icon(Icons.favorite, color: Colors.amber),
+                        icon: const Icon(Icons.favorite, color: Colors.amber),
                       )
                     : IconButton(
                         onPressed: () {
@@ -1806,7 +2084,10 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                           });
                           handleFavorite(conversation);
                         },
-                        icon: Icon(Icons.favorite_border, color: Colors.amber),
+                        icon: const Icon(
+                          Icons.favorite_border,
+                          color: Colors.amber,
+                        ),
                       ),
                 buildMenuConversation(conversation),
               ],
@@ -1861,54 +2142,72 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     );
   }
 
-  MenuEntry? _lastSelection;
+  Future<void> _fetchThreadByFolder(int folderId) async {
+    setState(() {
+      _isLoadingConversation = true;
+    });
 
-  void _fetchThreadByFolder(int folderId) async {
-    print(folderId);
-    var token = await TokenStorage.getToken();
+    final token = await TokenStorage.getToken();
+    if (token == null || token.isEmpty) {
+      _showSnack('Session expirée. Veuillez vous reconnecter.', isError: true);
+      if (mounted) {
+        setState(() {
+          _isLoadingConversation = false;
+        });
+      }
+      return;
+    }
 
     try {
-      var response = await FolderThreadServicce().getAllThreadToFolder(
-        token!,
+      final response = await FolderThreadServicce().getAllThreadToFolder(
+        token,
         folderId,
       );
 
-      print(response);
-
-      List<ConversationModel> threads = [];
-
-      for (var thread in response['data']) {
-        threads.add(
-          ConversationModel(
-            id: thread['id'].toString(),
-            title: thread['title'],
-            favories: thread['favorites'],
-          ),
-        );
+      final List<ConversationModel> threads = [];
+      if (response['data'] is List) {
+        for (final thread in response['data']) {
+          threads.add(
+            ConversationModel(
+              id: thread['id'].toString(),
+              title: (thread['title'] ?? '').toString(),
+              favories: thread['favorites'] == true,
+            ),
+          );
+        }
       }
 
+      if (!mounted) return;
       setState(() {
         listConversation = threads;
       });
-
-      print(response);
     } catch (error) {
+      _showSnack(
+        'Erreur lors du chargement des conversations du dossier.',
+        isError: true,
+      );
       print(error);
-    } finally {}
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingConversation = false;
+        });
+      }
+    }
   }
 
-  void _fetchFolderThread() async {
+  Future<void> _fetchFolderThread() async {
     if (!listDossierActive) return;
 
     setState(() {
       _isLoadingFolder = true;
     });
 
-    var token = await TokenStorage.getToken();
-    var poolId = await PoolIdStorage.getPoolId();
+    final token = await TokenStorage.getToken();
+    final poolId = await PoolIdStorage.getPoolId();
 
     try {
-      var response = await FolderThreadServicce().getAllFolderThread(
+      final response = await FolderThreadServicce().getAllFolderThread(
         token!,
         int.tryParse(poolId!)!,
       );
@@ -1928,12 +2227,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         });
       }
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Une Erreur à survenue $error"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnack("Une erreur est survenue: $error", isError: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -1944,7 +2238,8 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
   }
 
   void _handleNewFolder(String name) async {
-    if (_folderNameController.text.trim().isEmpty) {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
       setState(() {
         addFolder = false;
       });
@@ -1958,23 +2253,24 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       var response = await FolderThreadServicce().createFolder(
         token!,
         poolId!,
-        DossierModel(id: uuid.v1(), name: name.trim()),
+        DossierModel(id: uuid.v1(), name: trimmedName),
       );
 
       if (response['success']) {
-        print(response['data']);
+        final createdData = response['data'];
+        final createdId =
+            _parseId(
+              createdData is Map ? createdData['id'] : null,
+            )?.toString() ??
+            uuid.v1();
         setState(() {
-          listDossiers.add(DossierModel(id: uuid.v1(), name: name.trim()));
+          listDossiers.add(DossierModel(id: createdId, name: trimmedName));
         });
+        _showSnack('Dossier créé.');
       }
     } catch (error) {
       print(error);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Une Erreur à survenue $error"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnack("Une erreur est survenue: $error", isError: true);
     } finally {
       setState(() {
         addFolder = false;
@@ -1983,39 +2279,32 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
     }
   }
 
-  void _activateDossier(MenuEntry selection, DossierModel dossier) {
-    setState(() {
-      _lastSelection = selection;
-    });
-
+  Future<void> _activateDossier(
+    MenuEntry selection,
+    DossierModel dossier,
+  ) async {
     switch (selection) {
       case MenuEntry.newMessage:
-        {
-          setState(() {
-            sessionId = null;
-            _messages.clear();
-            listDossierActive = true;
-            selectedDossier = dossier;
-          });
-          Navigator.pop(context);
-        }
-      /* case MenuEntry.ouvrir:
-        debugPrint('Ouvrir'); */
+        setState(() {
+          sessionId = null;
+          thread_id = null;
+          _messages.clear();
+          listDossierActive = true;
+          selectedDossier = dossier;
+        });
+        Navigator.pop(context);
+        break;
       case MenuEntry.renommer:
         setState(() {
           renamedDossier = dossier;
         });
-      //showingMessage = !showingMessage;
+        break;
       case MenuEntry.supprimer:
-        setState(() {
-          listDossiers.remove(dossier);
-        });
+        await _deleteDossier(dossier);
+        break;
       case MenuEntry.dupliquer:
-        setState(() {
-          listDossiers.add(
-            DossierModel(id: uuid.v1(), name: 'Copie: ${dossier.name}'),
-          );
-        });
+        await _duplicateDossier(dossier);
+        break;
       case MenuEntry.discussion:
         break;
       case MenuEntry.addToFolder:
