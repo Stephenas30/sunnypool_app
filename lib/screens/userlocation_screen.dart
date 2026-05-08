@@ -22,7 +22,6 @@ class _UserlocationScreen extends State<UserlocationScreen> {
   bool locationChecked = false;
 
   void loadLocation() async {
-    
     try {
       setState(() {
         isLoadingLocation = true;
@@ -42,7 +41,7 @@ class _UserlocationScreen extends State<UserlocationScreen> {
       paysController.text = address['country'] ?? '';
     } catch (e) {
       print(e);
-    } 
+    }
   }
 
   void listenerInput() {
@@ -76,36 +75,30 @@ class _UserlocationScreen extends State<UserlocationScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(10),
-            child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: screenHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Column(
-                    children: [
-                      Image.asset('assets/icon.png', height: screenHeight / 4),
-                      Text(
-                        'Votre Localisation',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: Colors.amber,
-                          fontWeight: FontWeight.bold,
-                          fontSize: screenWidth * 0.08,
-                        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(14),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Column(
+                  children: [
+                    Image.asset(
+                      'assets/icon.png',
+                      height: (screenHeight / 4.4).clamp(90.0, 160.0),
+                    ),
+                    Text(
+                      'Votre Localisation',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.amber,
+                        fontWeight: FontWeight.bold,
+                        fontSize: (screenWidth * 0.08).clamp(24.0, 34.0),
                       ),
-                    ],
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    // margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: Form(
+                    ),
+                    const SizedBox(height: 10),
+                    Form(
                       key: _formKey,
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildTextField(
                             Icons.home,
@@ -123,47 +116,59 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                             villeController,
                           ),
                           _buildTextField(Icons.public, 'Pays', paysController),
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 60,
-                              vertical: 8,
-                            ),
-                            child: ElevatedButton(
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
                               onPressed: loadLocation,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(
+                                  color: Colors.amber,
+                                  width: 1,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(5),
-                                  ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
                                 ),
-                                side: BorderSide(color: Colors.amber, width: 1),
                               ),
                               child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
                                 children: [
-                                  Icon(Icons.gps_fixed, color: Colors.white),
-                                  // SizedBox(width: 10),
-                                  Text(
-                                    'Utiliser ma localisation GPS',
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.03,
-                                      color: Colors.white,
+                                  const Icon(
+                                    Icons.gps_fixed,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Utiliser ma localisation GPS',
+                                      style: TextStyle(
+                                        fontSize: (screenWidth * 0.034).clamp(
+                                          12.0,
+                                          15.0,
+                                        ),
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
-                                  isLoadingLocation ?
-                                  CircularProgressIndicator(
-                                    color: Colors.amber,
-                                    strokeWidth: 1,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.amber,
+                                  if (isLoadingLocation)
+                                    const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.amber,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  else if (locationChecked)
+                                    Icon(
+                                      Icons.check_circle_sharp,
+                                      color: Colors.green[600],
+                                      size: (screenWidth * 0.05).clamp(
+                                        16.0,
+                                        22.0,
+                                      ),
                                     ),
-                                  ) : locationChecked ? Icon(Icons.check_circle_sharp, color: Colors.green[600], size: screenWidth * 0.05) : SizedBox.shrink()
                                 ],
                               ),
                             ),
@@ -174,62 +179,75 @@ class _UserlocationScreen extends State<UserlocationScreen> {
                             'Utiliser ma localisation GPS',
                             paysController,
                           ), */
-                          SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: locationChecked ? () {
-                              print('Adresse: ${adresseController.text}');
-                              print(
-                                'Code Postal: ${codePostalController.text}',
-                              );
-                              print('Ville: ${villeController.text}');
-                              print('Pays: ${paysController.text}');
-                              print('Location: $locationChecked');
-                              Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AddPiscineScreen(),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: locationChecked
+                                  ? () {
+                                      print(
+                                        'Adresse: ${adresseController.text}',
+                                      );
+                                      print(
+                                        'Code Postal: ${codePostalController.text}',
+                                      );
+                                      print('Ville: ${villeController.text}');
+                                      print('Pays: ${paysController.text}');
+                                      print('Location: $locationChecked');
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AddPiscineScreen(),
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: locationChecked
+                                    ? Colors.amber
+                                    : Colors.grey,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                               ),
-                              );
-                            } : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: locationChecked ? Colors.amber : Colors.grey,
-                              padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.2,
-                              vertical: screenHeight * 0.01,
+                              child: Text(
+                                'Continuer',
+                                style: TextStyle(
+                                  fontSize: (screenWidth * 0.034).clamp(
+                                    12.0,
+                                    16.0,
+                                  ),
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                            child: Text(
-                              'Continuer',
-                              style: TextStyle(
-                              fontSize: screenWidth * 0.03,
-                              color: Colors.white,
-                              ),
-                            ),
-                            ),
-                          SizedBox(height: screenHeight * 0.01),
+                          ),
+                          const SizedBox(height: 8),
                           Column(
                             children: [
                               Text(
                                 'En continuant, vous acceptez nos',
-                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white70,
+                                ),
                               ),
                               Text(
                                 'Conditions générales d\'utilisation',
-                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white70,
+                                ),
                               ),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    // ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -242,15 +260,15 @@ class _UserlocationScreen extends State<UserlocationScreen> {
     String? Function(String?)? validator,
   }) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 60, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         controller: controller,
         obscureText: obscure,
-        style: TextStyle(color: Colors.white),
+        style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: Colors.amber),
           labelText: title,
-          labelStyle: TextStyle(color: Colors.amber),
+          labelStyle: const TextStyle(color: Colors.amber),
           enabledBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Colors.amber),
           ),

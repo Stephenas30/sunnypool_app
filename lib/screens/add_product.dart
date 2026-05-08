@@ -7,6 +7,7 @@ import 'package:sunnypool_app/models/product_model.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
 import 'package:sunnypool_app/services/product_service.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
+import 'package:sunnypool_app/widget/pick_image.dart';
 
 class AddProduct extends StatefulWidget {
   const AddProduct({super.key});
@@ -31,9 +32,11 @@ class _AddProductState extends State<AddProduct> {
 
   bool _isSubmitting = false;
 
-  Future<void> _takePhoto(String imageType) async {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-    if (photo != null) {
+  Future<void> _takePhoto(String imageType, BuildContext context) async {
+
+    PickImage(
+      onImagePicked: (File photo) {
+        if (photo != null) {
       setState(() {
         switch (imageType) {
           case 'Face avant':
@@ -44,7 +47,10 @@ class _AddProductState extends State<AddProduct> {
             break;
         }
       });
-    }
+    }},
+      context: context
+    ).showImageSourceSheet();
+    //final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
   }
 
   void _AddProduct() {
@@ -167,11 +173,11 @@ class _AddProductState extends State<AddProduct> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ajout guidé d\'un produit',
+                  'Ajouter vos produits',
                   style: theme.textTheme.headlineSmall?.copyWith(color: Colors.amber),
                 ),
                 const SizedBox(height: 8),
-                Text(
+                /* Text(
                   '1) Scannez l\'étiquette  2) Ajoutez les photos  3) Vérifiez les informations.',
                   style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                 ),
@@ -202,7 +208,7 @@ class _AddProductState extends State<AddProduct> {
                   ),
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 14), */
 
                 _buildSectionCard(
                   title: 'Informations produit',
@@ -285,7 +291,7 @@ class _AddProductState extends State<AddProduct> {
                         child:  _buildPhotoButton(
                           icon: Icons.add_a_photo,
                           label: 'Face avant',
-                          onPressed: () => _takePhoto('Face avant'),
+                          onPressed: () => _takePhoto('Face avant', context),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -293,7 +299,7 @@ class _AddProductState extends State<AddProduct> {
                         child: _buildPhotoButton(
                           icon: Icons.text_snippet,
                           label: 'Étiquette',
-                          onPressed: () => _takePhoto('Étiquette'),
+                          onPressed: () => _takePhoto('Étiquette', context),
                         ),
                       ),
                     ],

@@ -190,7 +190,7 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                         style: theme.textTheme.headlineSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: screenWidth * 0.05,
+                          fontSize: (screenWidth * 0.05).clamp(18.0, 24.0),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -199,7 +199,7 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                         'Naviguez facilement entre vos piscines et accédez aux détails de chacune.',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white70,
-                          fontSize: screenWidth * 0.03,
+                          fontSize: (screenWidth * 0.034).clamp(12.0, 15.0),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -261,7 +261,7 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  height: screenHeight * 0.06,
+                  height: 52,
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       await Navigator.push(
@@ -278,7 +278,7 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                       'Ajouter une piscine',
                       style: theme.textTheme.labelLarge?.copyWith(
                         color: Colors.black,
-                        fontSize: screenWidth * 0.025,
+                        fontSize: (screenWidth * 0.03).clamp(12.0, 15.0),
                       ),
                     ),
                   ),

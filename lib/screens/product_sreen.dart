@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sunnypool_app/models/product_model.dart';
+import 'package:sunnypool_app/screens/add_product.dart';
 import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/services/product_service.dart';
@@ -157,7 +158,7 @@ class _ProductScreenState extends State<ProductScreen> {
                       'Sélectionnez vos produits d\'entretien piscine pour que Sunny vous donne des recommandations précises et optimisées.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white70,
-                        fontSize: screenWidth * 0.03,
+                        fontSize: (screenWidth * 0.034).clamp(12.0, 15.0),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -222,10 +223,13 @@ class _ProductScreenState extends State<ProductScreen> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: () {
-                    print(listProduct);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => AddProduct()),
+                    );
                   },
                   child: Text(
-                    'Continuer',
+                    'Ajouter',
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: Colors.black,
                     ),
@@ -261,81 +265,102 @@ class _ProductScreenState extends State<ProductScreen> {
 
   Widget _buildListProduct(ProductModel product) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final iconSize = (screenWidth * 0.05).clamp(16.0, 22.0);
+    final titleSize = (screenWidth * 0.045).clamp(15.0, 20.0);
+    final textSize = (screenWidth * 0.033).clamp(12.0, 15.0);
+    final thumbSize = (screenWidth * 0.13).clamp(44.0, 62.0);
 
     return Container(
-      padding: EdgeInsets.all(12),
-      margin: EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         border: Border.all(color: Colors.amber.withOpacity(0.25)),
-        borderRadius: BorderRadius.all(Radius.circular(20)),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Image.network(
-            product.photoFace!,
-            width: screenWidth * 0.10,
-            height: screenWidth * 0.10,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              width: screenWidth * 0.10,
-              height: screenWidth * 0.10,
-              color: Colors.white12,
-              child: Icon(Icons.broken_image, color: Colors.white30),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: screenWidth * 0.05,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.opacity_outlined,
-                      color: Colors.amber,
-                      size: screenWidth * 0.05,
-                    ),
-                    Text(
-                      '${product.quantity} ${product.unit}',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: screenWidth * 0.03,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final verticalLayout = constraints.maxWidth < 360;
+          return Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Image.network(
+                    product.photoFace!,
+                    width: thumbSize,
+                    height: thumbSize,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: thumbSize,
+                      height: thumbSize,
+                      color: Colors.white12,
+                      child: const Icon(
+                        Icons.broken_image,
+                        color: Colors.white30,
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: titleSize,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.opacity_outlined,
+                              color: Colors.amber,
+                              size: iconSize,
+                            ),
+                            Text(
+                              '${product.quantity} ${product.unit}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: textSize,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if (!verticalLayout) ...[
+                    Icon(Icons.info, color: Colors.amber, size: iconSize),
                   ],
+                ],
+              ),
+              if (verticalLayout) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Icon(Icons.info, color: Colors.amber, size: iconSize),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            spacing: 12,
-            children: [
-              Icon(Icons.info, color: Colors.amber),
+              const SizedBox(height: 10),
               Container(
+                width: double.infinity,
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.amber),
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                 ),
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 child: Row(
-                  spacing: 12,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SizedBox(
                       width: 30,
@@ -350,17 +375,18 @@ class _ProductScreenState extends State<ProductScreen> {
                             }
                           });
                         },
-                        icon: Icon(Icons.remove, color: Colors.amber, size: 18),
+                        icon: const Icon(
+                          Icons.remove,
+                          color: Colors.amber,
+                          size: 18,
+                        ),
                         padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
+                        constraints: const BoxConstraints(),
                       ),
                     ),
                     Text(
                       '${product.quantity} ${product.unit}',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: screenWidth * 0.03,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: textSize),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(
@@ -372,17 +398,21 @@ class _ProductScreenState extends State<ProductScreen> {
                             product.quantity += 1;
                           });
                         },
-                        icon: Icon(Icons.add, color: Colors.amber, size: 18),
+                        icon: const Icon(
+                          Icons.add,
+                          color: Colors.amber,
+                          size: 18,
+                        ),
                         padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
+                        constraints: const BoxConstraints(),
                       ),
                     ),
                   ],
                 ),
               ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }

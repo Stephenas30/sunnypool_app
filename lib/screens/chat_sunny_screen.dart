@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sunnypool_app/models/conversation_model.dart';
@@ -12,6 +13,7 @@ import 'package:sunnypool_app/utils/poolId_storage.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
 import 'package:sunnypool_app/widget/appBar_widget.dart';
 import 'package:sunnypool_app/widget/typing_indicator_widget.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -32,7 +34,14 @@ enum MenuEntry {
 }
 
 class ChatSunnyScreen extends StatefulWidget {
-  const ChatSunnyScreen({super.key});
+  const ChatSunnyScreen({
+    super.key,
+    this.initialMessage,
+    this.autoSendInitialMessage = false,
+  });
+
+  final String? initialMessage;
+  final bool autoSendInitialMessage;
 
   @override
   State<ChatSunnyScreen> createState() => _ChatSunnyScreenState();
@@ -53,6 +62,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
 
   bool _isLoading = false;
   bool _isLoadingConversation = false;
+  bool _initialMessageSent = false;
 
   String? tokenValue;
   String? selectedMessageId;
@@ -165,6 +175,405 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       renamedConversation = null;
       renamedDossier = null;
     });
+  }
+
+  Map<String, dynamic>? _normalizeSunnyPayload(dynamic value) {
+    dynamic payload = value;
+    if (payload == null) return null;
+
+    if (payload is String) {
+      final trimmed = payload.trim();
+      if (trimmed.isEmpty) return null;
+      final looksLikeJson =
+          (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+          (trimmed.startsWith('[') && trimmed.endsWith(']'));
+      if (!looksLikeJson) return null;
+      try {
+        payload = jsonDecode(trimmed);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    if (payload is! Map) return null;
+    final map = Map<String, dynamic>.from(payload);
+    final hasKnownKeys =
+        map.containsKey('message') ||
+        map.containsKey('diagnosis') ||
+        map.containsKey('actions') ||
+        map.containsKey('products') ||
+        map.containsKey('links') ||
+        map.containsKey('warnings') ||
+        map.containsKey('questions');
+
+    return hasKnownKeys ? map : null;
+  }
+
+  List<dynamic> _asList(dynamic value) => value is List ? value : const [];
+
+  String _priorityKey(dynamic value) {
+    final key = (value ?? '').toString().toLowerCase();
+    if (key == 'high' || key == 'medium' || key == 'low') return key;
+    return 'low';
+  }
+
+  String _priorityLabel(dynamic value) {
+    switch (_priorityKey(value)) {
+      case 'high':
+        return 'Élevée';
+      case 'medium':
+        return 'Moyenne';
+      default:
+        return 'Faible';
+    }
+  }
+
+  Color _priorityColor(dynamic value) {
+    switch (_priorityKey(value)) {
+      case 'high':
+        return const Color(0xFFFF7B7B);
+      case 'medium':
+        return const Color(0xFFFFB86B);
+      default:
+        return const Color(0xFFE6C96E);
+    }
+  }
+
+  Future<void> _openSunnyLink(String? rawUrl) async {
+    final value = (rawUrl ?? '').trim();
+    final uri = Uri.tryParse(value);
+    final isHttp =
+        uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+
+    if (!isHttp) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lien invalide.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final launched = await launchUrl(
+      uri!,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible d\'ouvrir ce lien.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildSunnySection(String title, Widget child) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        border: Border.all(color: Colors.white24),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFFF0C75E),
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriorityChip(dynamic value, {String? prefix}) {
+    final label = _priorityLabel(value);
+    final color = _priorityColor(value);
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        border: Border.all(color: color.withValues(alpha: 0.6)),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '${prefix != null ? '$prefix: ' : ''}$label',
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSunnyStructuredMessage(Map<String, dynamic> payload) {
+    final diagnosis = payload['diagnosis'];
+    final actions = _asList(payload['actions']);
+    final products = _asList(payload['products']);
+    final links = _asList(payload['links']);
+    final warnings = _asList(payload['warnings']);
+    final questions = _asList(payload['questions']);
+
+    final content = <Widget>[];
+
+    final message = payload['message'];
+    if (message != null && message.toString().trim().isNotEmpty) {
+      content.add(
+        Text(message.toString(), style: const TextStyle(color: Colors.white)),
+      );
+    }
+
+    if (diagnosis is Map &&
+        ((diagnosis['summary'] ?? '').toString().isNotEmpty ||
+            (diagnosis['severity'] ?? '').toString().isNotEmpty)) {
+      content.add(
+        _buildSunnySection(
+          'Diagnostic',
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  (diagnosis['summary'] ?? 'Diagnostic disponible').toString(),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              if ((diagnosis['severity'] ?? '').toString().isNotEmpty)
+                _buildPriorityChip(diagnosis['severity'], prefix: 'Niveau'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (actions.isNotEmpty) {
+      content.add(
+        _buildSunnySection(
+          'Actions recommandées',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: actions.map((item) {
+              if (item is! Map) return const SizedBox.shrink();
+              final title = (item['title'] ?? 'Action').toString();
+              final description = (item['description'] ?? '').toString();
+              final priority = item['priority'];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ', style: TextStyle(color: Colors.white)),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if ((priority ?? '').toString().isNotEmpty)
+                          _buildPriorityChip(priority),
+                      ],
+                    ),
+                    if (description.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12, top: 4),
+                        child: Text(
+                          description,
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    }
+
+    if (products.isNotEmpty) {
+      content.add(
+        _buildSunnySection(
+          'Produits conseillés',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: products.map((item) {
+              if (item is! Map) return const SizedBox.shrink();
+              final name = (item['name'] ?? 'Produit').toString();
+              final reason = (item['reason'] ?? '').toString();
+              final dosage = item['dosage'];
+              final details = <String>[];
+              if (reason.isNotEmpty) details.add(reason);
+              if (dosage != null && dosage.toString().trim().isNotEmpty) {
+                details.add('Dosage: ${dosage.toString()}');
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ', style: TextStyle(color: Colors.white)),
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (details.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12, top: 4),
+                        child: Text(
+                          details.join(' • '),
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    }
+
+    if (links.isNotEmpty) {
+      content.add(
+        _buildSunnySection(
+          'Liens utiles',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: links.map((item) {
+              if (item is! Map) return const SizedBox.shrink();
+              final title = (item['title'] ?? 'Ouvrir le lien').toString();
+              final url = (item['url'] ?? '').toString();
+              if (url.trim().isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0x66FFD54F)),
+                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0x14FFD54F),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Color(0xFFF5D56D),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      InkWell(
+                        onTap: () => _openSunnyLink(url),
+                        child: Text(
+                          url,
+                          style: const TextStyle(
+                            color: Colors.lightBlueAccent,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    }
+
+    if (warnings.isNotEmpty) {
+      content.add(
+        _buildSunnySection(
+          'Avertissements',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: warnings.map((item) {
+              final text = item.toString();
+              if (text.trim().isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '• $text',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    }
+
+    if (questions.isNotEmpty) {
+      content.add(
+        _buildSunnySection(
+          'Questions de suivi',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: questions.map((item) {
+              final text = item.toString();
+              if (text.trim().isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '• $text',
+                  style: const TextStyle(color: Colors.white),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: content.isEmpty
+          ? [
+              Text(
+                payload.toString(),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ]
+          : content,
+    );
   }
 
   Widget _buildDrawerChat() {
@@ -574,7 +983,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       );
     }
 
-    Future<String> pollUntilCompleted(
+    Future<dynamic> pollUntilCompleted(
       String token,
       String conversationId,
     ) async {
@@ -584,8 +993,8 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
         final found = res['found'] == true;
 
         if (found) {
-          final response = (res['response'] ?? '').toString().trim();
-          if (response.isNotEmpty) {
+          final response = res['response'];
+          if (response != null && response.toString().trim().isNotEmpty) {
             return response;
           }
         }
@@ -631,7 +1040,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                       'id': uuid.v1(),
                       'role': 'assistant',
                       'text': '',
-                      'widget': TypingIndicator()
+                      'widget': TypingIndicator(),
                     });
                     print('En cours de traitement. Merci de patienter...');
                     _isLoading = false;
@@ -719,6 +1128,17 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
       _messageController.clear();
     }
 
+    final initialMessage = widget.initialMessage?.trim() ?? '';
+    if (!_initialMessageSent &&
+        widget.autoSendInitialMessage &&
+        initialMessage.isNotEmpty) {
+      _initialMessageSent = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        sendMessage(initialMessage);
+      });
+    }
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -785,6 +1205,13 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                   final id = msg['id']!;
                   final isUser = msg['role'] == 'user';
                   final isSelected = selectedMessageId == id;
+                  final dynamic rawText = msg['text'];
+                  final messageText = rawText?.toString() ?? '';
+                  final sunnyPayload = isUser
+                      ? null
+                      : _normalizeSunnyPayload(rawText);
+                  final hasTypingWidget =
+                      messageText.isEmpty && msg['widget'] is Widget;
 
                   return Align(
                     alignment: isUser
@@ -845,34 +1272,45 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
                                   ],
                                 ),
                               ],
-                              msg['text'] != '' ?
-                              Container(
-                                margin: const EdgeInsets.symmetric(vertical: 5),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 10,
-                                ),
-                                constraints: const BoxConstraints(
-                                  maxWidth: 290,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isUser
-                                      ? Colors.amber
-                                      : const Color(0xFF1D1D1D),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: isUser
-                                        ? Colors.amber
-                                        : Colors.white24,
-                                  ),
-                                ),
-                                child: Text(
-                                  msg['text']!,
-                                  style: TextStyle(
-                                    color: isUser ? Colors.black : Colors.white,
-                                  ),
-                                ),
-                              ) : TypingIndicator()
+                              hasTypingWidget
+                                  ? msg['widget'] as Widget
+                                  : Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        vertical: 5,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 10,
+                                      ),
+                                      constraints: BoxConstraints(
+                                        maxWidth: sunnyPayload != null
+                                            ? 340
+                                            : 290,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isUser
+                                            ? Colors.amber
+                                            : const Color(0xFF1D1D1D),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: isUser
+                                              ? Colors.amber
+                                              : Colors.white24,
+                                        ),
+                                      ),
+                                      child: sunnyPayload != null
+                                          ? _buildSunnyStructuredMessage(
+                                              sunnyPayload,
+                                            )
+                                          : Text(
+                                              messageText,
+                                              style: TextStyle(
+                                                color: isUser
+                                                    ? Colors.black
+                                                    : Colors.white,
+                                              ),
+                                            ),
+                                    ),
                             ],
                           ),
                         ),
@@ -885,7 +1323,7 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
             if (_isLoading)
               const Align(
                 alignment: Alignment.center,
-                
+
                 child: TypingIndicator(),
               ),
 
@@ -1116,18 +1554,18 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
 
         List<dynamic> messages = response['data'];
 
-        final loadedMessages = <Map<String, String>>[];
+        final loadedMessages = <Map<String, dynamic>>[];
 
         for (final message in messages) {
           loadedMessages.add({
             'id': uuid.v1(),
             'role': 'user',
-            'text': (message['message'] ?? '').toString(),
+            'text': message['message'] ?? '',
           });
           loadedMessages.add({
             'id': uuid.v1(),
             'role': 'assistant',
-            'text': (message['response'] ?? '').toString(),
+            'text': message['response'],
           });
         }
 
@@ -1589,8 +2027,11 @@ class _ChatSunnyScreenState extends State<ChatSunnyScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+    final initialMessage = widget.initialMessage?.trim() ?? '';
+    if (!widget.autoSendInitialMessage && initialMessage.isNotEmpty) {
+      _messageController.text = initialMessage;
+    }
   }
 
   @override

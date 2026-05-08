@@ -64,7 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .then((Map<String, dynamic> pools) {
               print(pools['data'][0]['id'].toString());
               PoolIdStorage.savePoolId(pools['data'][0]['id'].toString());
-              
+
               Pool pool = Pool(
                 id: pools['data'][0]['id'].toString(),
                 name: pools['data'][0]['titre'] ?? 'not name',
@@ -280,6 +280,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final compact = screenWidth < 380;
+    final horizontalPadding = compact ? 12.0 : 16.0;
+    final poolPhoto = checkPool?.photoPool?.photoPool;
+    final ImageProvider poolImage =
+        poolPhoto != null && poolPhoto.startsWith('http')
+        ? NetworkImage(poolPhoto)
+        : const AssetImage('assets/piscine.png');
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -294,13 +301,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset("assets/logo.png", height: 32),
-              SizedBox(width: 8),
+              Image.asset("assets/logo.png", height: compact ? 26 : 32),
+              const SizedBox(width: 8),
               Text(
                 "Sunny",
                 style: TextStyle(
                   color: Colors.amber,
-                  fontSize: 22,
+                  fontSize: compact ? 19 : 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -370,7 +377,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               : SingleChildScrollView(
                   scrollDirection: Axis.vertical,
                   child: Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: EdgeInsets.all(horizontalPadding),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       spacing: 16,
@@ -383,13 +390,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             image: DecorationImage(
-                              image: NetworkImage(
-                                checkPool?.photoPool?.photoPool ??
-                                    'assets/piscine.png',
-                              ),
+                              image: poolImage,
                               fit: BoxFit.cover,
                               colorFilter: ColorFilter.mode(
-                                Colors.black.withOpacity(0.1),
+                                Colors.black.withValues(alpha: 0.1),
                                 BlendMode.darken,
                               ),
                             ),
@@ -423,27 +427,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Text(
                                       checkPool?.name ?? "Nom de la piscine",
                                       style: TextStyle(
-                                        color: const Color.fromARGB(
-                                          255,
-                                          255,
-                                          255,
-                                          255,
+                                        color: Colors.white,
+                                        fontSize: (screenWidth * 0.08).clamp(
+                                          24.0,
+                                          36.0,
                                         ),
-                                        fontSize: screenWidth * 0.08,
-                                        // fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                     Text(
                                       "${checkPool?.volume} m³",
                                       style: TextStyle(
-                                        color: const Color.fromARGB(
-                                          255,
-                                          255,
-                                          255,
-                                          255,
+                                        color: Colors.white,
+                                        fontSize: (screenWidth * 0.06).clamp(
+                                          20.0,
+                                          32.0,
                                         ),
-                                        fontSize: screenWidth * 0.07,
-                                        // fontWeight: FontWeight.normal,
                                       ),
                                     ),
                                   ],
@@ -455,13 +453,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   children: [
                                     Text(
                                       "Traitement: ${traitement['product']}",
-                                      style: TextStyle(
-                                        color: const Color.fromARGB(
-                                          255,
-                                          255,
-                                          255,
-                                          255,
-                                        ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
                                       ),
                                     ),
                                     LinearProgressIndicator(
@@ -514,8 +507,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         '${weather['temperature']}°C',
                                         style: TextStyle(
                                           color: Colors.white,
-                                          fontSize: screenWidth * 0.07,
-                                          // fontWeight: FontWeight.bold,
+                                          fontSize: (screenWidth * 0.07).clamp(
+                                            22.0,
+                                            34.0,
+                                          ),
                                         ),
                                       );
                                     },
@@ -529,14 +524,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     temps[0],
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: screenWidth * 0.03,
+                                      fontSize: (screenWidth * 0.032).clamp(
+                                        12.0,
+                                        15.0,
+                                      ),
                                     ),
                                   ),
                                   Text(
                                     ".",
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: screenWidth * 0.03,
+                                      fontSize: (screenWidth * 0.032).clamp(
+                                        12.0,
+                                        15.0,
+                                      ),
                                     ),
                                   ),
                                   Text(
@@ -548,7 +549,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         153,
                                         153,
                                       ),
-                                      fontSize: screenWidth * 0.03,
+                                      fontSize: (screenWidth * 0.032).clamp(
+                                        12.0,
+                                        15.0,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -556,39 +560,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                         ),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          spacing: 16,
-                          children: [
-                            _buildContainerRow(
-                              Icons.science,
-                              "Analyse de l'eau",
-                              AnalyseScreen(),
-                            ),
-                            _buildContainerRow(
-                              Icons.photo,
-                              "Photo piscine",
-                              PhotosScreen(),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          spacing: 16,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildContainerRow(
-                              Icons.message,
-                              "Parler à Sunny",
-                              ChatSunnyScreen(),
-                            ),
-                            _buildContainerRow(
-                              Icons.add,
-                              "Ajouter produit",
-                              AddProduct(),
-                            ),
-                          ],
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            const gap = 12.0;
+                            final twoColumns = constraints.maxWidth > 340;
+                            final tileWidth = twoColumns
+                                ? (constraints.maxWidth - gap) / 2
+                                : constraints.maxWidth;
+                            return Wrap(
+                              spacing: gap,
+                              runSpacing: gap,
+                              children: [
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: _buildContainerRow(
+                                    Icons.science,
+                                    "Analyse de l'eau",
+                                    const AnalyseScreen(),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: _buildContainerRow(
+                                    Icons.photo,
+                                    "Photo piscine",
+                                    const PhotosScreen(),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: _buildContainerRow(
+                                    Icons.message,
+                                    "Parler à Sunny",
+                                    const ChatSunnyScreen(),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: _buildContainerRow(
+                                    Icons.add,
+                                    "Ajouter produit",
+                                    const AddProduct(),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                         Container(
                           decoration: BoxDecoration(
@@ -598,7 +615,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               color: Colors.amber.withOpacity(0.15),
                             ),
                           ),
-                          height: 350,
+                          height: (screenHeight * 0.42).clamp(280.0, 380.0),
                           width: double.infinity,
                           padding: EdgeInsets.all(16),
                           // margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -614,7 +631,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     'Planning d\'entretien',
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: screenWidth * 0.05,
+                                      fontSize: (screenWidth * 0.05).clamp(
+                                        16.0,
+                                        23.0,
+                                      ),
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -811,50 +831,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ]) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    return Expanded(
-      child: Container(
-        // padding: EdgeInsets.all(16),
-        // margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.amber.withOpacity(0.15)),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.withOpacity(0.15)),
+      ),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          alignment: Alignment.centerLeft,
         ),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            alignment: Alignment.centerLeft,
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    destination ??
-                    Scaffold(
-                      appBar: AppBar(title: Text(title)),
-                      body: Center(child: Text("Page $title en construction")),
-                    ),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  destination ??
+                  Scaffold(
+                    appBar: AppBar(title: Text(title)),
+                    body: Center(child: Text("Page $title en construction")),
+                  ),
+            ),
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              color: Colors.amber,
+              size: (screenWidth * 0.08).clamp(20.0, 30.0),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: (screenWidth * 0.04).clamp(13.0, 17.0),
+                fontWeight: FontWeight.bold,
               ),
-            );
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: Colors.amber, size: screenWidth * 0.08),
-              SizedBox(height: 10),
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: screenWidth * 0.04,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

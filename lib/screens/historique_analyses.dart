@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:sunnypool_app/screens/analyse_screen.dart';
 import 'package:sunnypool_app/services/analyse_service.dart';
 import 'package:sunnypool_app/utils/poolId_storage.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
@@ -205,7 +206,12 @@ class _HistoriqueAnalysesState extends State<HistoriqueAnalyses> {
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => AnalyseScreen()),
+                  );
+                        },
                         child: Text(
                           'Nouvelle analyse',
                           style: theme.textTheme.labelLarge?.copyWith(

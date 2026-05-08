@@ -48,10 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text("Profil"),
-      ),
+      appBar: AppBar(centerTitle: true, title: const Text("Profil")),
       body: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
@@ -61,107 +58,129 @@ class _ProfileScreenState extends State<ProfileScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundImage: (_avatar == "assets/icon.png") ? AssetImage(_avatar)  : NetworkImage(_avatar),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                _displayName,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: Colors.amber,
-                ),
-              ),
-              Text(
-                _displayEmail,
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-              ),
-              const SizedBox(height: 30),
-              Card(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 540),
                 child: Column(
                   children: [
-                    ListTile(
-                      leading: const Icon(Icons.person, color: Colors.amber),
-                      title: const Text(
-                        "Informations personnelles",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const PersonalInfoScreen(),
-                          ),
-                        );
-                        _loadProfilePreferences();
-                      },
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundImage: (_avatar == "assets/icon.png")
+                          ? AssetImage(_avatar)
+                          : NetworkImage(_avatar),
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.lock, color: Colors.amber),
-                      title: const Text(
-                        "Modifier le mot de passe",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ChangePasswordScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    SwitchListTile(
-                      value: _notificationsEnabled,
-                      onChanged: _setNotificationValue,
-                      activeThumbColor: Colors.amber,
-                      title: const Text(
-                        "Notifications reçues",
-                        style: TextStyle(color: Colors.white),
+                    const SizedBox(height: 20),
+                    Text(
+                      _displayName,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.amber,
                       ),
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.history, color: Colors.amber),
-                      title: const Text(
-                        "Historique des analyses",
-                        style: TextStyle(color: Colors.white),
+                    Text(
+                      _displayEmail,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const HistoriqueAnalyses(),
+                    ),
+                    const SizedBox(height: 30),
+                    Card(
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(
+                              Icons.person,
+                              color: Colors.amber,
+                            ),
+                            title: const Text(
+                              "Informations personnelles",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PersonalInfoScreen(),
+                                ),
+                              );
+                              _loadProfilePreferences();
+                            },
                           ),
-                        );
-                      },
+                          ListTile(
+                            leading: const Icon(
+                              Icons.lock,
+                              color: Colors.amber,
+                            ),
+                            title: const Text(
+                              "Modifier le mot de passe",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ChangePasswordScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          SwitchListTile(
+                            value: _notificationsEnabled,
+                            onChanged: _setNotificationValue,
+                            activeThumbColor: Colors.amber,
+                            title: const Text(
+                              "Notifications reçues",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          ListTile(
+                            leading: const Icon(
+                              Icons.history,
+                              color: Colors.amber,
+                            ),
+                            title: const Text(
+                              "Historique des analyses",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const HistoriqueAnalyses(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                        ),
+                        onPressed: () async {
+                          await TokenStorage.clearToken();
+                          if (!context.mounted) return;
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        },
+                        child: const Text("Se déconnecter"),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Spacer(),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 15,
-                  ),
-                ),
-                onPressed: () async {
-                  await TokenStorage.clearToken();
-                  if (!context.mounted) return;
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false,
-                  );
-                },
-                child: const Text("Se déconnecter"),
-              ),
-            ],
+            ),
           ),
         ),
       ),

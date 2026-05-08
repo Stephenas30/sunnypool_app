@@ -716,6 +716,14 @@ class _AddPiscineScreen extends State<AddPiscineScreen> {
         }
         return false;
       }
+      if(photoPool == null) {
+        if (showError) {
+          _showStepError(
+            'L\'image de la piscine est requis.',
+          );
+        }
+        return false;
+      }
     }
 
     if (_currentStep == 1 && traitementChecked.isEmpty) {

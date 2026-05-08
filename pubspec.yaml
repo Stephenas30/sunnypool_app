@@ -49,6 +49,7 @@ dependencies:
   connectivity_plus: ^6.0.5
   internet_connection_checker: ^3.0.1
   syncfusion_flutter_calendar: ^33.2.5
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

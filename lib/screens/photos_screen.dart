@@ -219,7 +219,6 @@ class _PhotosScreenState extends State<PhotosScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       appBar: AppBar(
@@ -255,121 +254,105 @@ class _PhotosScreenState extends State<PhotosScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Center(
-          child: Padding(
-            padding: EdgeInsetsGeometry.symmetric(horizontal: 12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Column(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Image.asset('assets/logo.png', width: screenWidth * 0.3),
+                    Image.asset(
+                      'assets/logo.png',
+                      width: (screenWidth * 0.3).clamp(90.0, 160.0),
+                    ),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Text(
-                        'Ajoutez des photos  de votre piscine pour une analyse précise.',
+                        'Ajoutez des photos de votre piscine pour une analyse précise.',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white70,
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-                  ],
-                ),
-                Container(
-                  //height: 1,
-                  width: double.infinity,
-                  //color: Colors.white38,
-                  margin: EdgeInsets.symmetric(horizontal: 30),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: screenWidth,
-                      maxHeight: screenHeight / 2.3,
+                    const SizedBox(height: 16),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final gridCount = constraints.maxWidth < 430 ? 1 : 2;
+                        return GridView.count(
+                          crossAxisCount: gridCount,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          childAspectRatio: gridCount == 1 ? 2.4 : 1.1,
+                          children: [
+                            _buildCardPhoto('Vue d\'ensemble', image_ensemble),
+                            _buildCardPhoto('Eau de la piscine', image_eau),
+                            _buildCardPhoto('Local technique', image_local),
+                            _buildCardPhoto('Equipements', image_equipements),
+                          ],
+                        );
+                      },
                     ),
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      children: [
-                        _buildCardPhoto('Vue d\'ensemble', image_ensemble),
-                        _buildCardPhoto('Eau de la piscine', image_eau),
-                        _buildCardPhoto('Local technique', image_local),
-                        _buildCardPhoto('Equipements', image_equipements),
-                      ],
-                    ),
-                  ),
-                ),
+                    const SizedBox(height: 16),
 
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
-                    border: Border.all(
-                      color: Colors.amber.withValues(alpha: 0.25),
-                    ),
-                    borderRadius: BorderRadius.all(Radius.circular(20)),
-                  ),
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  margin: EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Conseil',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.05,
-                          color: Colors.amber,
-                          fontWeight: FontWeight.bold,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        border: Border.all(
+                          color: Colors.amber.withValues(alpha: 0.25),
+                        ),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(20),
                         ),
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 16,
+                      ),
+                      child: Column(
                         children: [
+                          Text(
+                            'Conseil',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: (screenWidth * 0.05).clamp(18.0, 24.0),
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           Text(
                             'Prenez des photos nettes et lumineuses',
                             style: TextStyle(
-                              fontSize: screenWidth * 0.03,
+                              fontSize: (screenWidth * 0.033).clamp(12.0, 15.0),
                               color: Colors.white70,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
                           Text(
                             'Montrez la pompe, le skimmer, le robot',
                             style: TextStyle(
-                              fontSize: screenWidth * 0.03,
+                              fontSize: (screenWidth * 0.033).clamp(12.0, 15.0),
                               color: Colors.white70,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
                           Text(
-                            'L\'IA analusera votre piscine automatiquement',
+                            'L\'IA analysera votre piscine automatiquement',
                             style: TextStyle(
-                              fontSize: screenWidth * 0.03,
+                              fontSize: (screenWidth * 0.033).clamp(12.0, 15.0),
                               color: Colors.white70,
                             ),
                             textAlign: TextAlign.center,
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                /* ElevatedButton(
+                    ),
+                    const SizedBox(height: 16),
+                    /* ElevatedButton(
                 onPressed: () {
                   print('Confirmer et continuer');
                   print('Image ensemble: ${image_ensemble?.path}');
@@ -397,30 +380,32 @@ class _PhotosScreenState extends State<PhotosScreen> {
                   ),
                 ),
               ), */
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    onPressed: _isSubmitting ? null : _analyse,
-                    icon: _isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.black,
-                            ),
-                          )
-                        : const Icon(Icons.check_circle),
-                    label: Text(
-                      _isSubmitting ? 'Analysé...' : 'Analyser',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: Colors.black,
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSubmitting ? null : _analyse,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : const Icon(Icons.check_circle),
+                        label: Text(
+                          _isSubmitting ? 'Analysé...' : 'Analyser',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.black,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

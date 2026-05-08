@@ -58,33 +58,35 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.04),
-          child: Center(
-            child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            spacing: 20,
-            children: [
-              Column(
-                children: [
-                  Image.asset('assets/logo.png', height: screenHeight / 6),
-                  Text(
-                    'Guide et conseils pour l\'entretien de votre piscine.',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                    textAlign: TextAlign.center,
-                    softWrap: true,
-                  ),
-                ],
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              vertical: 20,
+              horizontal: (screenWidth * 0.04).clamp(12.0, 24.0),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 620),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/logo.png',
+                      height: (screenHeight / 6).clamp(70.0, 120.0),
+                    ),
+                    Text(
+                      'Guide et conseils pour l\'entretien de votre piscine.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
+                      textAlign: TextAlign.center,
+                      softWrap: true,
+                    ),
+                    const SizedBox(height: 16),
+                    ...listTutoriels.map((item) => _buildListTutoriels(item)),
+                  ],
+                ),
               ),
-              ListView(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                children: listTutoriels
-                    .map((item) => _buildListTutoriels(item))
-                    .toList(),
-              ),
-            ],
             ),
           ),
         ),
@@ -94,10 +96,9 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
 
   Widget _buildListTutoriels(String title) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     final selected = tutorielsChecked == title;
     return Container(
-      margin: EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(16),
@@ -120,16 +121,16 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
             Expanded(
               child: Image.asset(
                 'assets/piscine.png',
-                height: screenHeight * 0.08,
+                height: (screenWidth * 0.16).clamp(56.0, 84.0),
               ),
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
                 style: TextStyle(
                   color: selected ? Colors.amber : Colors.white,
-                  fontSize: screenWidth * 0.03,
+                  fontSize: (screenWidth * 0.034).clamp(12.0, 16.0),
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -139,7 +140,7 @@ class _TutoralsScreenState extends State<TutoralsScreen> {
               child: Icon(
                 Icons.play_circle_outline_outlined,
                 color: selected ? Colors.amber : Colors.white70,
-                size: screenWidth * 0.08,
+                size: (screenWidth * 0.08).clamp(22.0, 32.0),
               ),
             ),
           ],
