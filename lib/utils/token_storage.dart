@@ -13,6 +13,7 @@ class TokenStorage {
 
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("pool_id");
     await prefs.remove("auth_token");
   }
 }

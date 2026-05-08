@@ -1,11 +1,17 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:sunnypool_app/models/analyse_model.dart';
+import 'package:sunnypool_app/models/photo_model.dart';
 import 'package:sunnypool_app/screens/profile_screen.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:sunnypool_app/services/analyse_service.dart';
+import 'package:sunnypool_app/utils/poolId_storage.dart';
+import 'package:sunnypool_app/utils/token_storage.dart';
+import 'package:sunnypool_app/widget/pick_image.dart';
 
 class PhotosScreen extends StatefulWidget {
-  const PhotosScreen({Key? key}) : super(key: key);
+  const PhotosScreen({super.key});
 
   @override
   State<PhotosScreen> createState() {
@@ -15,15 +21,39 @@ class PhotosScreen extends StatefulWidget {
 }
 
 class _PhotosScreenState extends State<PhotosScreen> {
-  final ImagePicker _picker = ImagePicker();
+  final _surfaceSoftColor = Color(0xFF1E1E1E);
+  final _borderColor = Color(0x33FFD54F);
+  static const int _pollMaxAttempts = 25;
+  static const Duration _pollInterval = Duration(seconds: 2);
 
   File? image_ensemble;
   File? image_eau;
   File? image_local;
   File? image_equipements;
 
-    Future<void> _takePhoto(String imageType) async {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+  void _takePhoto(String imageType) {
+    PickImage(
+      onImagePicked: (photo) {
+        setState(() {
+          switch (imageType) {
+            case 'Vue d\'ensemble':
+              image_ensemble = File(photo.path);
+              break;
+            case 'Eau de la piscine':
+              image_eau = File(photo.path);
+              break;
+            case 'Local technique':
+              image_local = File(photo.path);
+              break;
+            case 'Equipements':
+              image_equipements = File(photo.path);
+              break;
+          }
+        });
+      },
+      context: context,
+    ).showImageSourceSheet();
+    /* final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo != null) {
       setState(() {
         switch (imageType) {
@@ -41,15 +71,154 @@ class _PhotosScreenState extends State<PhotosScreen> {
             break;
         }
       });
+    } */
+  }
+
+  bool _isSubmitting = false;
+
+  List<PhotoModel> _selectedPhotos() {
+    final photos = <PhotoModel>[];
+
+    if (image_ensemble != null) {
+      photos.add(
+        PhotoModel(
+          title: 'Vue d\'ensemble',
+          imageType: 'overview',
+          file: image_ensemble!,
+        ),
+      );
+    }
+    if (image_eau != null) {
+      photos.add(
+        PhotoModel(
+          title: 'Eau de la piscine',
+          imageType: 'water',
+          file: image_eau!,
+        ),
+      );
+    }
+    if (image_local != null) {
+      photos.add(
+        PhotoModel(
+          title: 'Local technique',
+          imageType: 'technical_room',
+          file: image_local!,
+        ),
+      );
+    }
+    if (image_equipements != null) {
+      photos.add(
+        PhotoModel(
+          title: 'Equipements',
+          imageType: 'equipments',
+          file: image_equipements!,
+        ),
+      );
+    }
+
+    return photos;
+  }
+
+  Future<String> _pollUntilCompleted(String token, String analyseId) async {
+    for (int attempt = 0; attempt < _pollMaxAttempts; attempt++) {
+      final res = await AnalyseService().responseAnalyse(token, analyseId);
+      final found = res['found'] == true;
+
+      if (found) {
+        final response = (res['response'] ?? '').toString().trim();
+        if (response.isNotEmpty) {
+          return response;
+        }
+      }
+
+      await Future.delayed(_pollInterval);
+    }
+
+    throw TimeoutException('Polling timeout');
+  }
+
+  Future<void> _analyse() async {
+    if (_isSubmitting) return;
+
+    final selectedPhotos = _selectedPhotos();
+    if (selectedPhotos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Ajoutez au moins une photo avant de lancer l\'analyse',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final tokenValue = await TokenStorage.getToken();
+      if (tokenValue == null || tokenValue.isEmpty) {
+        throw Exception('Session expirée. Veuillez vous reconnecter.');
+      }
+
+      final poolIdValue = await PoolIdStorage.getPoolId();
+      final poolId = int.tryParse(poolIdValue ?? '');
+      if (poolId == null) {
+        throw Exception('Aucune piscine sélectionnée.');
+      }
+
+      final response = await AnalyseService().sendAnalysePhoto(
+        tokenValue,
+        AnalyseModel(pool_id: poolId, images: _selectedPhotos()),
+      );
+
+      final analyseId = response['analyse_id']?.toString();
+
+      final finalResponse = await _pollUntilCompleted(tokenValue, analyseId!);
+
+      if (!mounted) return;
+
+      print(finalResponse);
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Résultat de l\'analyse'),
+            content: SingleChildScrollView(
+              child: SelectableText(finalResponse),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Fermer'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de l\'analyse: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    
 
     return Scaffold(
       appBar: AppBar(
@@ -85,106 +254,105 @@ class _PhotosScreenState extends State<PhotosScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Center(
-          child: Padding(
-            padding: EdgeInsetsGeometry.symmetric(horizontal: 12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-              Column(
-                children: [
-                  Image.asset('assets/logo.png', width: screenWidth * 0.3),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'Ajoutez des photos  de votre piscine pour une analyse précise.',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  minWidth: screenWidth,
-                  maxHeight: screenHeight / 3,
-                ),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  children: [
-                    _buildCardPhoto('Vue d\'ensemble', image_ensemble),
-                    _buildCardPhoto('Eau de la piscine', image_eau),
-                    _buildCardPhoto('Local technique', image_local),
-                    _buildCardPhoto('Equipements', image_equipements),
-                  ],
-                ),
-            ),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
-                  border: Border.all(color: Colors.amber.withOpacity(0.25)),
-                  borderRadius: BorderRadius.all(Radius.circular(20)),
-                ),
-                padding: EdgeInsets.symmetric(vertical: 8),
-                margin: EdgeInsets.symmetric(horizontal: 20),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text('Conseil', textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.05,
-                        color: Colors.amber,
-                        fontWeight: FontWeight.bold,
+                    Image.asset(
+                      'assets/logo.png',
+                      width: (screenWidth * 0.3).clamp(90.0, 160.0),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'Ajoutez des photos de votre piscine pour une analyse précise.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white70,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Prenez des photos nettes et lumineuses',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.03,
-                            color: Colors.white70,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final gridCount = constraints.maxWidth < 430 ? 1 : 2;
+                        return GridView.count(
+                          crossAxisCount: gridCount,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          childAspectRatio: gridCount == 1 ? 2.4 : 1.1,
+                          children: [
+                            _buildCardPhoto('Vue d\'ensemble', image_ensemble),
+                            _buildCardPhoto('Eau de la piscine', image_eau),
+                            _buildCardPhoto('Local technique', image_local),
+                            _buildCardPhoto('Equipements', image_equipements),
+                          ],
+                        );
+                      },
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Montrez la pompe, le skimmer, le robot',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.03,
-                            color: Colors.white70,
-                          ),
-                          textAlign: TextAlign.center,
+                    const SizedBox(height: 16),
+
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        border: Border.all(
+                          color: Colors.amber.withValues(alpha: 0.25),
                         ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'L\'IA analusera votre piscine automatiquement',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.03,
-                            color: Colors.white70,
-                          ),
-                          textAlign: TextAlign.center,
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(20),
                         ),
-                      ],
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 16,
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Conseil',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: (screenWidth * 0.05).clamp(18.0, 24.0),
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Prenez des photos nettes et lumineuses',
+                            style: TextStyle(
+                              fontSize: (screenWidth * 0.033).clamp(12.0, 15.0),
+                              color: Colors.white70,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          Text(
+                            'Montrez la pompe, le skimmer, le robot',
+                            style: TextStyle(
+                              fontSize: (screenWidth * 0.033).clamp(12.0, 15.0),
+                              color: Colors.white70,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          Text(
+                            'L\'IA analysera votre piscine automatiquement',
+                            style: TextStyle(
+                              fontSize: (screenWidth * 0.033).clamp(12.0, 15.0),
+                              color: Colors.white70,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-              ElevatedButton(
+                    const SizedBox(height: 16),
+                    /* ElevatedButton(
                 onPressed: () {
                   print('Confirmer et continuer');
                   print('Image ensemble: ${image_ensemble?.path}');
@@ -211,8 +379,33 @@ class _PhotosScreenState extends State<PhotosScreen> {
                     style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
                   ),
                 ),
+              ), */
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSubmitting ? null : _analyse,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : const Icon(Icons.check_circle),
+                        label: Text(
+                          _isSubmitting ? 'Analysé...' : 'Analyser',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              ],
             ),
           ),
         ),
@@ -220,7 +413,78 @@ class _PhotosScreenState extends State<PhotosScreen> {
     );
   }
 
-  Widget _buildCardPhoto(String title,File? image) {
+  Widget _buildCardPhoto(String title, File? image) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _takePhoto(title),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _surfaceSoftColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(13),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      image != null
+                          ? Image.file(image, fit: BoxFit.cover)
+                          : Image.asset(
+                              'assets/piscine.png',
+                              fit: BoxFit.cover,
+                            ),
+                      Container(color: Colors.black.withValues(alpha: 0.35)),
+                      const Center(
+                        child: Icon(
+                          Icons.photo_camera,
+                          color: Colors.amber,
+                          size: 34,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      image != null ? 'Modifiée' : 'Ajouter',
+                      style: const TextStyle(color: Colors.amber, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /* Widget _buildCardPhoto(String title,File? image) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     return Padding(padding: EdgeInsets.all(8), 
@@ -299,5 +563,5 @@ class _PhotosScreenState extends State<PhotosScreen> {
       ),
     )
     );
-  }
+  } */
 }

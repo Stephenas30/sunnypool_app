@@ -3,6 +3,7 @@ import 'package:sunnypool_app/models/pool_model.dart';
 import 'package:sunnypool_app/models/user_model.dart';
 import 'package:sunnypool_app/screens/add_piscine_screen.dart';
 import 'package:sunnypool_app/screens/dashboard_screen.dart';
+import 'package:sunnypool_app/screens/login_screen.dart';
 import 'package:sunnypool_app/services/pool_service.dart';
 import 'package:sunnypool_app/utils/list_piscine.dart';
 import 'package:sunnypool_app/utils/token_storage.dart';
@@ -50,36 +51,79 @@ class _MypiscineScreen extends State<MypiscineScreen> {
 
       print('Token récupéré : $tokenValue'); // Debug: Affiche le token
 
-      final pools = await PoolService().getAllPool(tokenValue.toString());
-      final fetchPool = <Pool>[];
+      await PoolService()
+          .getAllPool(tokenValue.toString())
+          .then((pools) {
+            final fetchPool = <Pool>[];
 
-      if (pools['data'] is List) {
-        for (final item in pools['data']) {
-          fetchPool.add(
-            Pool(
-              name: item['titre'] ?? 'Piscine sans nom',
-              type: TypePool.beton,
-              dimension: Dimension(
-                length: parseDouble(item['caracteristiques']?['length']),
-                width: parseDouble(item['caracteristiques']?['width']),
-                depth: parseDouble(item['caracteristiques']?['depth']),
-              ),
-              location: Location(
-                latitude: parseDouble(item['localisation']?['latitude']),
-                longitude: parseDouble(item['localisation']?['longitude']),
-              ),
-            ),
-          );
-        }
-      }
+            if (pools['data'] is List) {
+              for (final item in pools['data']) {
+                print(item); // Debug: Affiche chaque piscine récupérée
+                fetchPool.add(
+                  Pool(
+                    id: item['id']?.toString(),
+                    name: item['titre'] ?? 'Piscine sans nom',
+                    type: TypePoolExtension.fromString(
+                      item['caracteristiques']['type']?.toString() ?? 'coque',
+                    ),
+                    dimension: Dimension(
+                      length: parseDouble(
+                        item['caracteristiques']?['longueur'],
+                      ),
+                      width: parseDouble(item['caracteristiques']?['largeur']),
+                      depth: parseDouble(
+                        item['caracteristiques']?['profondeur'],
+                      ),
+                    ),
+                    location: Location(
+                      latitude: parseDouble(item['localisation']?['latitude']),
+                      longitude: parseDouble(
+                        item['localisation']?['longitude'],
+                      ),
+                    ),
+                    photoPool: PhotoPool(
+                      photoPool: item['photos']?[0]?['full'] ?? '',
+                      /* photoBassin:
+                          item['photos']?[0]?['url'] ?? 'assets/piscine.png',
+                      photoEnvironnement: item['photos']?[0]?['full'] ?? '',
+                      photoLocalTechn: item['photos']?[0]?['thumbnail'] ?? '', */
+                    ),
+                  ),
+                );
+              }
+            }
 
-      setState(() {
-        piscines = fetchPool;
-        _isLoading = false;
-      });
+            setState(() {
+              piscines = fetchPool;
+            });
+          })
+          .catchError((error) {
+            if (error is ApiException && error.statusCode == 401) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Session expirée. Veuillez vous reconnecter.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              TokenStorage.clearToken().then((_) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => LoginScreen()),
+                );
+              });
+            } else {
+              setState(() {
+                _errorMessage =
+                    'Erreur lors du chargement des piscines : $error';
+              });
+            }
+          });
     } catch (_) {
       setState(() {
         _errorMessage = 'Impossible de charger vos piscines pour le moment.';
+      });
+    } finally {
+      setState(() {
         _isLoading = false;
       });
     }
@@ -93,6 +137,9 @@ class _MypiscineScreen extends State<MypiscineScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -122,7 +169,10 @@ class _MypiscineScreen extends State<MypiscineScreen> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 20,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF121212),
                     borderRadius: BorderRadius.circular(24),
@@ -130,20 +180,27 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                   ),
                   child: Column(
                     children: [
-                      Image.asset('assets/logo.png', height: 120),
-                      const SizedBox(height: 14),
+                      Image.asset(
+                        'assets/logo.png',
+                        height: screenHeight * 0.1,
+                      ),
+                      const SizedBox(height: 8),
                       Text(
                         'Liste de vos piscines',
                         style: theme.textTheme.headlineSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          fontSize: (screenWidth * 0.05).clamp(18.0, 24.0),
                         ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Naviguez facilement entre vos piscines et accédez aux détails de chacune.',
-                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white70,
+                          fontSize: (screenWidth * 0.034).clamp(12.0, 15.0),
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -152,7 +209,9 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                 const SizedBox(height: 20),
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: Colors.amber))
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Colors.amber),
+                        )
                       : _errorMessage != null
                       ? Center(
                           child: Column(
@@ -160,7 +219,9 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                             children: [
                               Text(
                                 _errorMessage!,
-                                style: theme.textTheme.bodyMedium?.copyWith(color: Colors.redAccent),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: Colors.redAccent,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 12),
@@ -176,7 +237,9 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                       ? Center(
                           child: Text(
                             'Aucune piscine disponible pour le moment.',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white54),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white54,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                         )
@@ -184,23 +247,28 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                           color: Colors.amber,
                           onRefresh: _loadPools,
                           child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                            physics: const AlwaysScrollableScrollPhysics(
+                              parent: BouncingScrollPhysics(),
+                            ),
                             itemCount: piscines.length,
-                            separatorBuilder: (context, index) => const SizedBox(height: 10),
-                            itemBuilder: (context, index) => _buildListPool(piscines[index]),
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) =>
+                                _buildListPool(piscines[index]),
                           ),
                         ),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  height: 56,
+                  height: 52,
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => AddPiscineScreen(onAddPool: addArticle),
+                          builder: (_) =>
+                              AddPiscineScreen(onAddPool: addArticle),
                         ),
                       );
                       _loadPools();
@@ -208,7 +276,10 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                     icon: const Icon(Icons.add),
                     label: Text(
                       'Ajouter une piscine',
-                      style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: Colors.black,
+                        fontSize: (screenWidth * 0.03).clamp(12.0, 15.0),
+                      ),
                     ),
                   ),
                 ),
@@ -222,7 +293,9 @@ class _MypiscineScreen extends State<MypiscineScreen> {
 
   Widget _buildListPool(Pool pool) {
     final theme = Theme.of(context);
-    final typeLabel = pool.type.toString().split('.').last;
+    var typeLabel = pool
+        .type
+        .label; // Utilise l'extension pour obtenir le label lisible du type de piscine
 
     return Card(
       child: InkWell(
@@ -239,11 +312,21 @@ class _MypiscineScreen extends State<MypiscineScreen> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(18),
-                child: Image.asset(
-                  'assets/piscine.png',
-                  width: 96,
-                  height: 96,
+                child: Image.network(
+                  pool.photoPool?.photoPool ?? 'assets/piscine.png',
+                  width: 80,
+                  height: 80,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 80,
+                    height: 80,
+                    color: Colors.grey[300],
+                    child: const Icon(
+                      Icons.pool,
+                      color: Colors.white54,
+                      size: 40,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -253,22 +336,32 @@ class _MypiscineScreen extends State<MypiscineScreen> {
                   children: [
                     Text(
                       pool.name,
-                      style: theme.textTheme.titleLarge?.copyWith(color: Colors.amber),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.amber,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Type • $typeLabel',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Dim: ${pool.dimension.length} x ${pool.dimension.width} x ${pool.dimension.depth} m',
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white54,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.amber),
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 18,
+                color: Colors.amber,
+              ),
             ],
           ),
         ),

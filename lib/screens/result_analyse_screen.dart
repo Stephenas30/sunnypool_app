@@ -16,11 +16,10 @@ class AnalyseResult {
 }
 
 class ResultAnalyseScreen extends StatefulWidget {
-  const ResultAnalyseScreen({Key? key}) : super(key: key);
+  const ResultAnalyseScreen({super.key});
 
   @override
   State<ResultAnalyseScreen> createState() {
-    // TODO: implement createState
     return _ResultAnalyseScreenState();
   }
 }
@@ -30,22 +29,23 @@ class _ResultAnalyseScreenState extends State<ResultAnalyseScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    String alert = 'Eau à corriger !';
-    List<AnalyseResult> result = [
+
+    const alert = 'Eau à corriger !';
+    final result = <AnalyseResult>[
       AnalyseResult(
         remark: 'pH trop haut',
         hint: 8.0,
         message: 'Ajouter 200 g de pH-',
       ),
       AnalyseResult(
-        remark: 'Chlores trop bas',
+        remark: 'Chlore trop bas',
         hint: 0.5,
         unit: 'ppm',
-        message: 'Ajouter 50g de chlore choc.',
+        message: 'Ajouter 50 g de chlore choc.',
       ),
     ];
-    List<String>? advices = [
+
+    final advices = <String>[
       'Augmenter le temps de filtration à 10h par jour',
       'Brossez les parois et le fond de la piscine',
       'Refaites un test dans 24h pour vérifier l\'équilibre',
@@ -63,14 +63,14 @@ class _ResultAnalyseScreenState extends State<ResultAnalyseScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: CircleAvatar(
-              backgroundImage: AssetImage("assets/icon.png"),
+            icon: const CircleAvatar(
+              backgroundImage: AssetImage('assets/icon.png'),
               radius: 16,
             ),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => ProfileScreen()),
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
               );
             },
           ),
@@ -85,132 +85,150 @@ class _ResultAnalyseScreenState extends State<ResultAnalyseScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Center(
-          child: Padding(
-            padding: EdgeInsetsGeometry.symmetric(horizontal: 12),
-            child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 40),
-                margin: EdgeInsets.only(left: 8, top: 20),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.85),
-                  borderRadius: BorderRadius.all(Radius.circular(20)),
-                ),
-                child: Text(
-                  alert,
-                  style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
-                  textAlign: TextAlign.start,
-                ),
-              ),
-              ConstrainedBox(
-                
-                constraints: BoxConstraints(
-                  minHeight: screenHeight / 5,
-                  minWidth: screenWidth / 5,
-                  maxWidth: screenWidth / 1.2,
-                  maxHeight: screenHeight / 3,
-                ),
-                child: GridView.count(
-                  crossAxisCount: 2,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ...result.map((r) => _buildCardContainer(r)).toList(),
-                  ],
-                ),
-              ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                spacing: 20,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A1A1A),
-                      border: Border.all(color: Colors.amber.withOpacity(0.22)),
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
-                    ),
-                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 20),
-                    margin: EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: 12,
-                      children: [
-                        Text(
-                          'Voc à vos mesures :',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: screenWidth * 0.05, color: Colors.amber),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 20,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.85),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(20),
                         ),
-                        advices.isEmpty
-                            ? Text(
-                                'Aucun conseil à donner pour le moment',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: screenWidth * 0.03),
-                              )
-                            : Column(
-                                spacing: 8,
-                                children: [
-                                  ...advices
-                                      .map(
-                                        (advice) => Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.start,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              advice,
-                                              style: TextStyle(
-                                                fontSize: screenWidth * 0.03,
-                                                color: Colors.white70,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                      .toList(),
-                                ],
-                              ),
-                      ],
+                      ),
+                      child: Text(
+                        alert,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
-                  Column(
-                    spacing: 8,
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
+                    const SizedBox(height: 12),
+                    GridView.count(
+                      crossAxisCount: screenWidth < 430 ? 1 : 2,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: screenWidth < 430 ? 2.4 : 1.35,
+                      children: [...result.map((r) => _buildCardContainer(r))],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        border: Border.all(
+                          color: Colors.amber.withValues(alpha: 0.22),
+                        ),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(20),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 14,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Vos conseils :',
+                            style: TextStyle(
+                              fontSize: (screenWidth * 0.05).clamp(17.0, 22.0),
+                              color: Colors.amber,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (advices.isEmpty)
+                            Text(
+                              'Aucun conseil à donner pour le moment',
+                              style: TextStyle(
+                                fontSize: (screenWidth * 0.034).clamp(
+                                  12.0,
+                                  16.0,
+                                ),
+                                color: Colors.white70,
+                              ),
+                            )
+                          else
+                            ...advices.map(
+                              (advice) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '• ',
+                                      style: TextStyle(color: Colors.amber),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        advice,
+                                        style: TextStyle(
+                                          fontSize: (screenWidth * 0.034).clamp(
+                                            12.0,
+                                            16.0,
+                                          ),
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
                         onPressed: () {},
                         child: Text(
                           'Parler à Sunny',
-                          style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.black,
+                          ),
                         ),
                       ),
-                      ),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton(
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
                         onPressed: () {},
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.white38),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                         child: Text(
                           'Enregistrer cette analyse',
-                          style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ],
             ),
           ),
         ),
@@ -222,17 +240,18 @@ class _ResultAnalyseScreenState extends State<ResultAnalyseScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Container(
-      margin: EdgeInsets.all(8),
+      margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.amber),
-        borderRadius: BorderRadius.all(Radius.circular(20)),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            decoration: BoxDecoration(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: const BoxDecoration(
               color: Colors.amber,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(20),
@@ -241,20 +260,36 @@ class _ResultAnalyseScreenState extends State<ResultAnalyseScreen> {
             ),
             child: Text(
               result.remark,
-              style: TextStyle(fontSize: screenWidth * 0.05),
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w700,
+                fontSize: (screenWidth * 0.042).clamp(13.0, 18.0),
+              ),
             ),
           ),
-          Column(
-            children: [
-              Text(
-                '${result.hint} ${result.unit ?? ''}',
-                style: TextStyle(fontSize: screenWidth * 0.08),
-              ),
-              Text(
-                result.message,
-                style: TextStyle(fontSize: screenWidth * 0.03),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${result.hint} ${result.unit ?? ''}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: (screenWidth * 0.06).clamp(20.0, 28.0),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  result.message,
+                  style: TextStyle(
+                    fontSize: (screenWidth * 0.034).clamp(12.0, 15.0),
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

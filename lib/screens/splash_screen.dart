@@ -4,7 +4,7 @@ import 'package:sunnypool_app/screens/onBording_screen.dart';
 import '../utils/token_storage.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   _SplashScreenState createState() => _SplashScreenState();
@@ -23,12 +23,18 @@ class _SplashScreenState extends State<SplashScreen> {
   void _checkAuth() async {
     final token = await TokenStorage.getToken();
     if (token != null) {
-      if(context.mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardScreen()));
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => DashboardScreen()),
+        );
       }
     } else {
-      if(context.mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => OnbordingScreen()));
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => OnbordingScreen()),
+        );
       }
     }
   }
@@ -63,7 +69,9 @@ class _SplashScreenState extends State<SplashScreen> {
                 const SizedBox(height: 12),
                 Text(
                   "Assistant piscine intelligent",
-                  style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: Colors.white70,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 28),

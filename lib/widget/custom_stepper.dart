@@ -14,6 +14,9 @@ class CustomStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Row(
       children: List.generate(steps.length, (index) {
         return Expanded(
@@ -30,8 +33,8 @@ class CustomStepper extends StatelessWidget {
                     // Cercle
                     AnimatedContainer(
                       duration: Duration(milliseconds: 300),
-                      width: 30,
-                      height: 30,
+                      width: screenHeight * 0.035,
+                      height: screenHeight * 0.035,
                       decoration: BoxDecoration(
                         color: index <= currentStep
                             ? Colors.amber
@@ -73,7 +76,7 @@ class CustomStepper extends StatelessWidget {
                 Text(
                   steps[index],
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: screenWidth * 0.025,
                     color: index <= currentStep
                         ? Colors.amber
                         : Colors.grey,

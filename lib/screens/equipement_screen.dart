@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'profile_screen.dart';
 
 class EquipementScreen extends StatefulWidget {
-  const EquipementScreen({Key? key}) : super(key: key);
+  const EquipementScreen({super.key});
 
   @override
   State<EquipementScreen> createState() => _EquipementScreenState();
@@ -59,67 +59,91 @@ class _EquipementScreenState extends State<EquipementScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.08),
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF121212),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.amber.withOpacity(0.25)),
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: (screenWidth * 0.07).clamp(14.0, 28.0),
                 ),
                 child: Column(
                   children: [
-                    Image.asset('assets/logo.png', height: screenHeight / 7),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF121212),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.25),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Image.asset(
+                            'assets/logo.png',
+                            height: (screenHeight / 7).clamp(70.0, 120.0),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Ajoutons les équipements présents dans votre piscine.',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white70,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: listEquipement.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) =>
+                            _buildListEquipement(listEquipement[index]),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        child: Text(
+                          'Continuer',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 10),
-                    Text(
-                      'Ajoutons les équipements présents dans votre piscine.',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                      textAlign: TextAlign.center,
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: () {},
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.white38),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Text(
+                          'Passer',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: listEquipement.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) => _buildListEquipement(listEquipement[index]),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  child: Text(
-                    'Continuer',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.black),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white38),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: Text(
-                    'Passer',
-                    style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

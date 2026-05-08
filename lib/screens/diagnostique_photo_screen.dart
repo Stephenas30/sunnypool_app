@@ -5,7 +5,8 @@ class DiagnostiquePhotoScreen extends StatefulWidget {
   const DiagnostiquePhotoScreen({super.key});
 
   @override
-  State<DiagnostiquePhotoScreen> createState() => _DiagnostiquePhotoScreenState();
+  State<DiagnostiquePhotoScreen> createState() =>
+      _DiagnostiquePhotoScreenState();
 }
 
 const listDiagnostique = [
@@ -16,6 +17,86 @@ const listDiagnostique = [
 ];
 
 class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
+  bool _isSubmitting = false;
+
+  void _analyse() {
+    if (_isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    Map<String, String> valueAnalyse = {};
+    print(valueAnalyse);
+    /* TokenStorage.getToken().then((tokenValue) {
+      if (sessionId == null) {
+        setState(() {
+          sessionId = uuid.v4();
+        });
+      }
+      SunnyService()
+          .sendChat(
+            tokenValue!,
+            sessionId!,
+            MessageModel(
+              message:
+                  "Analyser mon eau à partir de ses mesures (ph, chlore, tac, stabilisant, temperature) dans l'analyse de l'eau",
+              analyse: valueAnalyse,
+            ),
+          )
+          .then((response) async {
+            print(response);
+            _isLoading = true;
+            try {
+              if (response['response'] == "pending") {
+                setState(() {
+                  _messages.add({
+                    'role': 'assistant',
+                    'text': 'En cours de traitement. Merci de patienter...',
+                  });
+                  _isLoading = false;
+                });
+              }
+              final finalResponse = await _pollUntilCompleted(
+                tokenValue,
+                response['conversation_id'],
+              );
+              if (!mounted) return;
+
+              setState(() {
+                _messages[_messages.length - 1] = {
+                  'role': 'assistant',
+                  'text': finalResponse,
+                };
+                _isLoading = false;
+                outputAnalyse = finalResponse;
+              });
+            } catch (error) {
+              if (!mounted) return;
+              setState(() {
+                _messages.add({
+                  'role': 'assistant',
+                  'text': 'Temps d\'attente dépassé. Merci de réessayer.',
+                });
+                _isLoading = false;
+              });
+              print(_messages);
+            }
+          })
+          .catchError((onError) {
+            if (!mounted) return;
+            print('Error $onError');
+          })
+          .whenComplete(() {
+            if (mounted) {
+              setState(() {
+                _isSubmitting = false;
+                analyseChecked = null;
+              });
+            }
+          });
+    }); */
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,33 +138,35 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20, horizontal: screenWidth * 0.04),
-          child: Center(
-            child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            spacing: 20,
-            children: [
-              Column(
-                children: [
-                  Image.asset('assets/logo.png', height: screenHeight / 6),
-                  Text(
-                    'Analyse intelligente des photos en cours.',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                    textAlign: TextAlign.center,
-                    softWrap: true,
-                  ),
-                ],
-              ),
-              ListView(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                children: listDiagnostique
-                    .map((item) => _buildListTutoriels(item))
-                    .toList(),
-              ),
-              Column(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              vertical: 20,
+              horizontal: (screenWidth * 0.04).clamp(12.0, 24.0),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 620),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/logo.png',
+                      height: (screenHeight / 6).clamp(70.0, 120.0),
+                    ),
+                    Text(
+                      'Analyse intelligente des photos en cours.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
+                      textAlign: TextAlign.center,
+                      softWrap: true,
+                    ),
+                    const SizedBox(height: 16),
+                    ...listDiagnostique.map(
+                      (item) => _buildListTutoriels(item),
+                    ),
+                    /* Column(
                 children: [
                   SizedBox(
                     width: double.infinity,
@@ -113,8 +196,34 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
               ),
                   ),
                 ],
-              )
-            ],
+              ) */
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSubmitting ? null : _analyse,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : const Icon(Icons.check_circle),
+                        label: Text(
+                          _isSubmitting ? 'Analysé...' : 'Analyser',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -125,7 +234,7 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
   Widget _buildListTutoriels(String title) {
     final screenWidth = MediaQuery.of(context).size.width;
     return Container(
-      margin: EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(16),
@@ -138,23 +247,23 @@ class _DiagnostiquePhotoScreenState extends State<DiagnostiquePhotoScreen> {
           elevation: 0, // supprime l'élévation
           padding: EdgeInsets.zero, // supprime le padding
         ),
-        onPressed: () {
-          
-        },
+        onPressed: () {},
         child: Row(
           children: [
             const SizedBox(width: 8),
-            Icon(Icons.check_circle_outline, color: Colors.amber,),
+            Icon(Icons.check_circle_outline, color: Colors.amber),
             const SizedBox(width: 10),
-            Expanded(child: Text(
+            Expanded(
+              child: Text(
                 title,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: screenWidth * 0.03,
+                  fontSize: (screenWidth * 0.034).clamp(12.0, 16.0),
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
-              )),
+              ),
+            ),
           ],
         ),
       ),

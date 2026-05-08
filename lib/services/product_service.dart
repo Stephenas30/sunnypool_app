@@ -1,21 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:sunnypool_app/models/pool_model.dart';
+import 'package:sunnypool_app/models/product_model.dart';
 import 'package:sunnypool_app/services/internet_service.dart';
+import 'package:sunnypool_app/services/pool_service.dart';
+import 'package:sunnypool_app/utils/poolId_storage.dart';
 
-class ApiException implements Exception {
-  final int statusCode;
-  final dynamic data;
-
-  ApiException({required this.statusCode, this.data});
-
-  @override
-  String toString() => 'ApiException(statusCode: $statusCode, data: $data)';
-}
-
-class PoolService {
-  static const String baseUrl =
+class ProductService {
+   static const String baseUrl =
       "https://sunny.trouvezpourmoi.com/wp-json/sunny-pool/v1";
 
   Future<String?> _toBase64IfFilePath(String? value) async {
@@ -30,23 +22,21 @@ class PoolService {
     return value;
   }
 
-
-  Future<Map<String, dynamic>> getAllPool(String token) async {
+  Future<Map<String, dynamic>> getAllProducts(String token) async {
     final hasInternet = await InternetService().hasInternet();
 
     if (!hasInternet) {
       throw ('Aucune connexion Internet');
     }
 
+    String idPool = await PoolIdStorage.getPoolId() as String;
     final response = await http.get(
-      Uri.parse("$baseUrl/my-pools"),
+      Uri.parse("$baseUrl/pool/$idPool/products"),
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
       },
     );
-
-    //print("Réponse serveur: \\${response.body}");
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -54,38 +44,43 @@ class PoolService {
     } else {
       final errorData = jsonDecode(response.body);
       throw ApiException(statusCode: response.statusCode, data: errorData);
-      //return jsonDecode(response.body);
     }
   }
 
-  Future<Map<String, dynamic>> addPool(String token, Pool pool) async {
+  Future<Map<String, dynamic>> addProduct(
+    String token,
+    ProductModel product,
+    {String? idPool}
+  ) async {
     final hasInternet = await InternetService().hasInternet();
 
     if (!hasInternet) {
       throw ('Aucune connexion Internet');
     }
-    
+
     print(token);
-
-    final imageBase64 = await _toBase64IfFilePath(pool.photoPool!.photoPool);
-
+    idPool ??= await PoolIdStorage.getPoolId() as String;
+    final photoFaceBase64 = await _toBase64IfFilePath(product.photoFace);
+    final photoNoticeBase64 = await _toBase64IfFilePath(
+      product.photoNoticeDosage,
+    );
     final response = await http.post(
-      Uri.parse("$baseUrl/pool"),
+      Uri.parse("$baseUrl/pool/$idPool/products"),
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
       },
       body: jsonEncode({
-        "nom_piscine": pool.name,
-        "type_piscine": pool.type.name,
-        "longueur": pool.dimension.length,
-        "largeur": pool.dimension.width,
-        "profondeur": pool.dimension.depth,
-        "adresse": pool.location.adresse,
-        "code_postal": pool.location.codePostal,
-        "ville": pool.location.ville,
-        "pays": pool.location.pays,
-        "image_base64": imageBase64,
+        "nom_produit": product.name,
+        "categorie": product.categorie.name,
+        "marque": product.marque, 
+        "commentaire": product.commentaire,
+        "quantite": product.quantity,
+        "unite": product.unit,
+        "photo_face_base64": photoFaceBase64,
+        "photo_notice_base64": photoNoticeBase64,
+        "date_ajout": product.dateAjout,
+        "date_mise_a_jour": product.dateMiseAJour,
       }),
     );
 

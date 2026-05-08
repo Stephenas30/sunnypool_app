@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:sunnypool_app/screens/add_piscine_screen.dart';
 import '../services/auth_service.dart';
 import '../utils/token_storage.dart';
 import 'login_screen.dart';
-import 'userlocation_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -26,18 +28,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _loading = true);
 
       try {
-        final token = await AuthService()
-            .register(_usernameController.text, _passwordController.text);
+        final token = await AuthService().register(
+          _usernameController.text,
+          _passwordController.text,
+        );
 
         if (token != null) {
           await TokenStorage.saveToken(token);
           Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => UserlocationScreen()));
+            context,
+            MaterialPageRoute(
+              builder: (_) => AddPiscineScreen(isFirstTime: true),
+            ),
+          );
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur : $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Erreur : $e")));
       } finally {
         setState(() => _loading = false);
       }
@@ -47,6 +55,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final compact = screenWidth < 380;
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -57,90 +67,127 @@ class _RegisterScreenState extends State<RegisterScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF121212),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.amber.withOpacity(0.2)),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 16 : 24,
+                vertical: 20,
               ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    Image.asset("assets/logo.png", height: 80),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Créer un compte",
-                      style: theme.textTheme.headlineSmall?.copyWith(color: Colors.amber),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Container(
+                  padding: EdgeInsets.all(compact ? 16 : 20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF121212),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        Image.asset(
+                          "assets/logo.png",
+                          height: compact ? 64 : 80,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          "Créer un compte",
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: Colors.amber,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildTextField(
+                          _usernameController,
+                          "Nom d’utilisateur",
+                          Icons.person,
+                          validator: (val) => val!.isEmpty
+                              ? "Entrez un nom d’utilisateur"
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          _firstNameController,
+                          "Prénom",
+                          Icons.badge,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          _lastNameController,
+                          "Nom",
+                          Icons.badge_outlined,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          _emailController,
+                          "Adresse email",
+                          Icons.email,
+                          validator: (val) =>
+                              val!.isEmpty ? "Entrez une adresse email" : null,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          _phoneController,
+                          "Téléphone",
+                          Icons.phone,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          _passwordController,
+                          "Mot de passe",
+                          Icons.lock,
+                          obscure: true,
+                          validator: (val) => val!.length < 6
+                              ? "Mot de passe trop court"
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTextField(
+                          _confirmPasswordController,
+                          "Confirmer mot de passe",
+                          Icons.lock_outline,
+                          obscure: true,
+                          validator: (val) => val != _passwordController.text
+                              ? "Les mots de passe ne correspondent pas"
+                              : null,
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: _loading ? null : _register,
+                            child: _loading
+                                ? const CircularProgressIndicator(
+                                    color: Colors.black,
+                                  )
+                                : const Text("Créer mon compte"),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text("Déjà un compte ? Se connecter"),
+                        ),
+                        Text(
+                          "En continuant, vous acceptez nos Conditions générales d'utilisation.",
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.grey,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                      _usernameController,
-                      "Nom d’utilisateur",
-                      Icons.person,
-                      validator: (val) => val!.isEmpty ? "Entrez un nom d’utilisateur" : null,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(_firstNameController, "Prénom", Icons.badge),
-                    const SizedBox(height: 12),
-                    _buildTextField(_lastNameController, "Nom", Icons.badge_outlined),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      _emailController,
-                      "Adresse email",
-                      Icons.email,
-                      validator: (val) => val!.isEmpty ? "Entrez une adresse email" : null,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(_phoneController, "Téléphone", Icons.phone),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      _passwordController,
-                      "Mot de passe",
-                      Icons.lock,
-                      obscure: true,
-                      validator: (val) => val!.length < 6 ? "Mot de passe trop court" : null,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildTextField(
-                      _confirmPasswordController,
-                      "Confirmer mot de passe",
-                      Icons.lock_outline,
-                      obscure: true,
-                      validator: (val) =>
-                          val != _passwordController.text ? "Les mots de passe ne correspondent pas" : null,
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _loading ? null : _register,
-                        child: _loading
-                            ? const CircularProgressIndicator(color: Colors.black)
-                            : const Text("Créer mon compte"),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => LoginScreen()),
-                        );
-                      },
-                      child: const Text("Déjà un compte ? Se connecter"),
-                    ),
-                    Text(
-                      "En continuant, vous acceptez nos Conditions générales d'utilisation.",
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -150,9 +197,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      IconData icon,
-      {bool obscure = false, String? Function(String?)? validator}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool obscure = false,
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
